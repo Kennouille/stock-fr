@@ -37,13 +37,13 @@ class ApiManager {
     constructor() {
         this.baseUrl = window.location.origin;
         this.endpoints = {
-            getConfig: '/.netlify/functions/vuestock-api?action=get-config',
-            saveRack: '/.netlify/functions/vuestock-api?action=save-rack',
-            deleteRack: '/.netlify/functions/vuestock-api?action=delete-rack',
-            saveLevel: '/.netlify/functions/vuestock-api?action=save-level',
-            saveSlot: '/.netlify/functions/vuestock-api?action=save-slot',
-            searchArticle: '/.netlify/functions/vuestock-api?action=search-article',
-            updateStock: '/.netlify/functions/vuestock-api?action=update-stock'
+            getConfig: '/vuestock-api?action=get-config',
+            saveRack: '/vuestock-api?action=save-rack',
+            deleteRack: '/vuestock-api?action=delete-rack',
+            saveLevel: '/vuestock-api?action=save-level',
+            saveSlot: '/vuestock-api?action=save-slot',
+            searchArticle: '/vuestock-api?action=search-article',
+            updateStock: '/vuestock-api?action=update-stock'
         };
     }
 
