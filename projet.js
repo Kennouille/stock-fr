@@ -617,6 +617,7 @@ async function createProject(projectData) {
                 responsable: projectData.responsable,
                 date_fin_prevue: projectData.date_fin_prevue,
                 budget: projectData.budget,
+                actif: true,
                 created_at: new Date().toISOString(),
                 created_by: state.user.id
             }])
@@ -663,6 +664,7 @@ async function archiveProject(projectId) {
             .from('w_projets')
             .update({
                 archived: true,
+                actif: false,
                 archived_at: new Date().toISOString(),
                 archived_by: state.user.id
             })
@@ -685,6 +687,7 @@ async function unarchiveProject(projectId) {
             .from('w_projets')
             .update({
                 archived: false,
+                actif: true,
                 archived_at: null,
                 archived_by: null
             })
