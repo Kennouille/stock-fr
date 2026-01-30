@@ -858,9 +858,14 @@ function populateArticleFilter() {
 
 function populateProjectFilter() {
     let html = '<option value="">Tous les projets</option>';
-    state.projects.forEach(project => {
+
+    // Filtrer uniquement les projets actifs (actif = true)
+    const activeProjects = state.projects.filter(project => project.actif === true);
+
+    activeProjects.forEach(project => {
         html += `<option value="${project.id}">${project.nom}</option>`;
     });
+
     elements.filterProject.innerHTML = html;
     elements.filterProject.value = state.filters.project;
 }
@@ -876,9 +881,14 @@ function populateUserFilter() {
 
 function populateProjectSelect() {
     let html = '<option value="">Sélectionnez un projet</option>';
-    state.projects.forEach(project => {
+
+    // Filtrer uniquement les projets actifs (actif = true)
+    const activeProjects = state.projects.filter(project => project.actif === true);
+
+    activeProjects.forEach(project => {
         html += `<option value="${project.id}">${project.nom}</option>`;
     });
+
     elements.reservationProject.innerHTML = html;
 }
 

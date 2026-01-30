@@ -1307,6 +1307,21 @@ function updateArchivedProjectsDisplay() {
     });
 
     elements.archivedProjectsGrid.innerHTML = html;
+
+    // ← AJOUTE CETTE SECTION POUR LES ÉVÉNEMENTS
+    document.querySelectorAll('.view-project-details').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const projectId = this.dataset.id;
+            showProjectDetails(projectId);
+        });
+    });
+
+    document.querySelectorAll('.unarchive-project').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const projectId = this.dataset.id;
+            unarchiveProjectAction(projectId);
+        });
+    });
 }
 
 function populateManagerFilter() {
