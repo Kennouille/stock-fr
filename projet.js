@@ -562,14 +562,12 @@ async function fetchArticles() {
     try {
         const { data, error } = await supabase
             .from('w_articles')
-            .select('id, nom, numero, code_barre, prix_unitaire, stock_actuel')
+            .select('id, nom, numero, code_barre, prix_unitaire, stock_actuel, stock_reserve') // ← AJOUT de stock_reserve
             .order('nom');
 
         if (error) throw error;
-
         state.articles = data || [];
         populateArticleSelect();
-
     } catch (error) {
         console.error('Erreur chargement articles:', error);
     }
@@ -2796,7 +2794,6 @@ async function updateReservationStockInfo(articleId) {
     if (!articleId || !state.currentProject) return;
 
     try {
-        // Récupérer l'article avec les stocks
         const article = state.articles.find(a => a.id === articleId);
         if (article) {
             const stockReserve = article.stock_reserve || 0;
@@ -2820,6 +2817,7 @@ async function updateReservationStockInfo(articleId) {
                 elements.reservationQuantity.value = Math.max(1, stockDisponible);
             }
         }
+        // ← Plus de code en dehors du if(article), donc pas d'erreur si article est null
 
     } catch (error) {
         console.error('Erreur mise à jour info stock:', error);
@@ -3328,9 +3326,12 @@ function setupEventListeners() {
 
             if (articleId) {
                 const article = state.articles.find(a => a.id === articleId);
-                const maxQuantity = article?.stock_actuel || 0; // ← Utilisez stock_actuel
+                // Calculer le stock disponible réel
+                const stockReserve = article?.stock_reserve || 0;
+                const stockActuel = article?.stock_actuel || 0;
+                const stockDisponible = Math.max(0, stockActuel - stockReserve);
 
-                if (value < maxQuantity) {
+                if (value < stockDisponible) {
                     input.value = value + 1;
                 }
             } else {
