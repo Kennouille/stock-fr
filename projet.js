@@ -662,6 +662,27 @@ async function updateProject(projectId, projectData) {
 
 async function archiveProject(projectId) {
     try {
+        showLoading();
+
+        // 1. Récupérer toutes les réservations du projet
+        const { data: reservations, error: reservationsError } = await supabase
+            .from('w_reservations_actives')
+            .select('id')
+            .eq('projet_id', projectId);
+
+        if (reservationsError) throw reservationsError;
+
+        console.log('Réservations à libérer:', reservations);
+
+        // 2. Libérer chaque réservation
+        if (reservations && reservations.length > 0) {
+            for (const reservation of reservations) {
+                console.log('Libération réservation:', reservation.id);
+                await releaseReservation(reservation.id, 'Libération automatique - Projet archivé');
+            }
+        }
+
+        // 3. Archiver le projet
         const { data, error } = await supabase
             .from('w_projets')
             .update({
@@ -676,9 +697,15 @@ async function archiveProject(projectId) {
 
         if (error) throw error;
 
+        // 4. Mettre à jour les données locales
+        await fetchReservations();
+        await fetchArticles();
+
+        hideLoading();
         return data;
     } catch (error) {
         console.error('Erreur archivage projet:', error);
+        hideLoading();
         throw error;
     }
 }
