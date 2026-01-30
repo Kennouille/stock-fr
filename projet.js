@@ -2805,20 +2805,20 @@ async function updateReservationStockInfo(articleId) {
 
             // Afficher le stock disponible réel
             elements.reservationAvailableStock.textContent = stockDisponible;
-        }
 
-        // Récupérer le nombre déjà réservé pour CE PROJET
-        const projectReservations = state.reservations.filter(r =>
-            r.projet_id === state.currentProject.id && r.article_id === articleId
-        );
-        const alreadyReserved = projectReservations.reduce((sum, r) => sum + r.quantite, 0);
-        elements.reservationAlreadyReserved.textContent = alreadyReserved;
+            // Récupérer le nombre déjà réservé pour CE PROJET
+            const projectReservations = state.reservations.filter(r =>
+                r.projet_id === state.currentProject.id && r.article_id === articleId
+            );
+            const alreadyReserved = projectReservations.reduce((sum, r) => sum + r.quantite, 0);
+            elements.reservationAlreadyReserved.textContent = alreadyReserved;
 
-        // Mettre à jour la quantité max avec le stock disponible
-        const currentQuantity = parseInt(elements.reservationQuantity.value) || 1;
+            // Mettre à jour la quantité max avec le stock disponible
+            const currentQuantity = parseInt(elements.reservationQuantity.value) || 1;
 
-        if (currentQuantity > stockDisponible) {
-            elements.reservationQuantity.value = Math.max(1, stockDisponible);
+            if (currentQuantity > stockDisponible) {
+                elements.reservationQuantity.value = Math.max(1, stockDisponible);
+            }
         }
 
     } catch (error) {
