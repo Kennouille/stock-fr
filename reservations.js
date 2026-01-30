@@ -445,7 +445,7 @@ async function createReservation(reservationData) {
                 // CE QUE TU AS DEMANDÉ
                 projet: project ? project.nom : null,
                 notes: reservationData.comment,
-                commentaire: notes,
+                commentaire: reservationData.comment,
                 utilisateur: username,
 
                 utilisateur_id: state.user.id,
@@ -571,13 +571,14 @@ async function createProject(projectData) {
                 description: projectData.description,
                 responsable: projectData.responsable,
                 date_fin_prevue: projectData.date_fin_prevue,
-                created_at: new Date().toISOString()
+                created_at: new Date().toISOString(),
+                actif: true, // <-- AJOUTE CETTE LIGNE
+                archived: false // <-- Optionnel mais recommandé
             }])
             .select()
             .single();
 
         if (error) throw error;
-
         return data;
     } catch (error) {
         console.error('Erreur création projet:', error);
