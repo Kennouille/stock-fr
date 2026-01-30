@@ -788,7 +788,7 @@ async function handleFormSubmit(event) {
             .from('w_articles')
             .select('id')
             .eq('numero', formData.numero)
-            .single();
+            .maybeSingle();
 
         if (existingArticle && !checkError) {
             showFormError('Ce numéro d\'article existe déjà. Veuillez en choisir un autre.');
@@ -801,7 +801,7 @@ async function handleFormSubmit(event) {
                 .from('w_articles')
                 .select('id')
                 .eq('code_barre', formData.code_barre)
-                .single();
+                .maybeSingle();
 
             if (existingBarcode && !barcodeError) {
                 showFormError('Ce code-barre est déjà utilisé par un autre article.');
