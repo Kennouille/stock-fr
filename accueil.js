@@ -2618,7 +2618,7 @@ async function openProjectSelectionModal() {
         const { data: projects, error } = await supabase
             .from('w_projets')
             .select('id, nom, numero, responsable, date_fin_prevue')
-            .eq('archived', false)
+            .eq('actif', true)
             .order('nom');
 
         if (error) throw error;
