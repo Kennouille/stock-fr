@@ -562,12 +562,16 @@ async function fetchArticles() {
     try {
         const { data, error } = await supabase
             .from('w_articles')
-            .select('id, nom, numero, code_barre, prix_unitaire, stock_actuel, stock_reserve') // ← AJOUT de stock_reserve
+            .select('id, nom, numero, code_barre, prix_unitaire, stock_actuel, stock_reserve')
             .order('nom');
 
         if (error) throw error;
         state.articles = data || [];
         populateArticleSelect();
+
+        // ← AJOUTE CETTE LIGNE
+        refreshReservationModal();
+
     } catch (error) {
         console.error('Erreur chargement articles:', error);
     }
@@ -2822,6 +2826,17 @@ async function updateReservationStockInfo(articleId) {
     } catch (error) {
         console.error('Erreur mise à jour info stock:', error);
     }
+}
+
+function refreshReservationModal() {
+    // Recalculer et réafficher les infos stock
+    const articleId = elements.reservationArticle.value;
+    if (articleId) {
+        updateReservationStockInfo(articleId);
+    }
+
+    // Repeupler la liste des articles (au cas où)
+    populateArticleSelect();
 }
 
 async function confirmAddReservation() {
