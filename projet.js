@@ -1295,9 +1295,14 @@ function populateManagerFilter() {
 function populateArticleSelect() {
     let html = '<option value="">Sélectionnez un article</option>';
     state.articles.forEach(article => {
-        // Affiche seulement les articles avec stock > 0
-        if ((article.stock_actuel || 0) > 0) {
-            html += `<option value="${article.id}">${article.nom} (${article.code || article.numero}) - Stock: ${article.stock_actuel}</option>`;
+        // Calculer le stock disponible réel
+        const stockReserve = article.stock_reserve || 0;
+        const stockActuel = article.stock_actuel || 0;
+        const stockDisponible = Math.max(0, stockActuel - stockReserve);
+
+        // Affiche seulement les articles avec stock disponible > 0
+        if (stockDisponible > 0) {
+            html += `<option value="${article.id}">${article.nom} (${article.code || article.numero}) - Stock disponible: ${stockDisponible}</option>`;
         }
     });
     elements.reservationArticle.innerHTML = html;
@@ -2791,25 +2796,29 @@ async function updateReservationStockInfo(articleId) {
     if (!articleId || !state.currentProject) return;
 
     try {
-        // Récupérer le stock total disponible
+        // Récupérer l'article avec les stocks
         const article = state.articles.find(a => a.id === articleId);
         if (article) {
-            elements.reservationAvailableStock.textContent = article.stock_actuel || 0;
+            const stockReserve = article.stock_reserve || 0;
+            const stockActuel = article.stock_actuel || 0;
+            const stockDisponible = Math.max(0, stockActuel - stockReserve);
+
+            // Afficher le stock disponible réel
+            elements.reservationAvailableStock.textContent = stockDisponible;
         }
 
-        // Récupérer le nombre déjà réservé pour ce projet
+        // Récupérer le nombre déjà réservé pour CE PROJET
         const projectReservations = state.reservations.filter(r =>
-            r.id_projet === state.currentProject.id && r.id_article === articleId
+            r.projet_id === state.currentProject.id && r.article_id === articleId
         );
         const alreadyReserved = projectReservations.reduce((sum, r) => sum + r.quantite, 0);
         elements.reservationAlreadyReserved.textContent = alreadyReserved;
 
-        // Mettre à jour la quantité max
-        const availableStock = article?.quantite_disponible || 0;
+        // Mettre à jour la quantité max avec le stock disponible
         const currentQuantity = parseInt(elements.reservationQuantity.value) || 1;
 
-        if (currentQuantity > availableStock) {
-            elements.reservationQuantity.value = Math.max(1, availableStock);
+        if (currentQuantity > stockDisponible) {
+            elements.reservationQuantity.value = Math.max(1, stockDisponible);
         }
 
     } catch (error) {
@@ -2836,7 +2845,7 @@ async function confirmAddReservation() {
             return;
         }
 
-        // Vérifier le stock disponible
+        // Vérifier le stock disponible réel
         const article = state.articles.find(a => a.id === articleId);
         if (!article) {
             elements.reservationErrorText.textContent = 'Article non trouvé';
@@ -2844,8 +2853,13 @@ async function confirmAddReservation() {
             return;
         }
 
-        if ((article.stock_actuel || 0) < quantity) {
-            elements.reservationErrorText.textContent = `Stock insuffisant. Disponible: ${article.stock_actuel || 0}`;
+        // Calculer le stock disponible réel
+        const stockReserve = article.stock_reserve || 0;
+        const stockActuel = article.stock_actuel || 0;
+        const stockDisponible = Math.max(0, stockActuel - stockReserve);
+
+        if (stockDisponible < quantity) {
+            elements.reservationErrorText.textContent = `Stock insuffisant. Disponible: ${stockDisponible}`;
             elements.reservationError.style.display = 'flex';
             return;
         }
@@ -2863,6 +2877,11 @@ async function confirmAddReservation() {
 
         // Ajouter à la liste des réservations
         state.reservations.push(newReservation);
+
+        // Mettre à jour le stock_reserve dans l'article local
+        if (article) {
+            article.stock_reserve = (article.stock_reserve || 0) + quantity;
+        }
 
         // Recharger les détails du projet
         await showProjectDetails(state.currentProject.id);
