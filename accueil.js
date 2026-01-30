@@ -3904,6 +3904,12 @@ function setupEventListeners() {
         scanArticleBtn.addEventListener('click', handleScanArticleForReturn);
     }
 
+    // Debug: vérifier quel bouton existe
+    console.log('🔍 Recherche des boutons de projet...');
+    console.log('Bouton selectProjetBtn:', document.getElementById('selectProjetBtn'));
+    console.log('Bouton reservationProjetBtn:', document.getElementById('reservationProjetBtn'));
+    console.log('Tous les boutons avec "projet":', document.querySelectorAll('[id*="projet"],[id*="Projet"]'));
+
     if (searchArticleBtn) {
         searchArticleBtn.addEventListener('click', handleSearchArticleForReturn);
     }
