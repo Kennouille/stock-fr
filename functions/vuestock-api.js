@@ -6,6 +6,12 @@ export async function onRequest(context) {
   const action = queryParams.action;
   const supabaseKey = context.env.SUPABASE_KEY;
 
+  const supabaseUrl = 'https://lanxxvocjwpyegoxxxkj.supabase.co';
+    const headers = {
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`
+    };
+
   // Récupérer le body si besoin (pour les actions POST)
   let eventBody = {};
   if (request.method === 'POST') {
@@ -41,35 +47,53 @@ export async function onRequest(context) {
   }
 
     if (action === 'get-racks') {
-        const response = await fetch(`${supabaseUrl}/rest/v1/w_vuestock_racks?select=*`, { headers });
-        return new Response(JSON.stringify(await response.json()), {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
+        const response = await fetch(`${supabaseUrl}/rest/v1/w_vuestock_racks?select=*`, {
+            headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`
+            }
+        });
+        const data = await response.json();
+        return new Response(JSON.stringify(data), {
+            status: 200,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
         });
     }
 
     if (action === 'get-levels') {
-        const response = await fetch(`${supabaseUrl}/rest/v1/w_vuestock_levels?select=*`, { headers });
-        return new Response(JSON.stringify(await response.json()), {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
+        const response = await fetch(`${supabaseUrl}/rest/v1/w_vuestock_levels?select=*`, {
+            headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`
+            }
+        });
+        const data = await response.json();
+        return new Response(JSON.stringify(data), {
+            status: 200,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
         });
     }
 
     if (action === 'get-slots') {
-        const response = await fetch(`${supabaseUrl}/rest/v1/w_vuestock_slots?select=*`, { headers });
-        return new Response(JSON.stringify(await response.json()), {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
+        const response = await fetch(`${supabaseUrl}/rest/v1/w_vuestock_slots?select=*`, {
+            headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`
+            }
+        });
+        const data = await response.json();
+        return new Response(JSON.stringify(data), {
+            status: 200,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
         });
     }
 
