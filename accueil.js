@@ -6125,14 +6125,21 @@ async function handleStockAction(type, popup, initialData) {
         } else if (type === 'in') {
             updates.stock_actuel = stockApres;
 
-            // CORRECTION ICI AUSSI
+            // Mettre à jour le prix unitaire si fourni
             const prixUnitaireInput = document.getElementById('inUnitPrice');
-            if (prixUnitaireInput && prixUnitaireInput.value) {
+            if (prixUnitaireInput?.value) {
                 updates.prix_unitaire = parseFloat(prixUnitaireInput.value);
             }
         } else if (type === 'res') {
             updates.stock_reserve = reserveApres;
         }
+
+        const { error: updateError } = await supabase
+            .from('w_articles')
+            .update(updates)
+            .eq('id', articleId);
+
+        if (updateError) throw updateError;
 
         // 9. SUCCÈS
         showTemporarySuccess(`${type === 'out' ? 'Sortie' : type === 'in' ? 'Entrée' : 'Réservation'} enregistrée avec succès !`);
