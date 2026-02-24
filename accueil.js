@@ -6665,8 +6665,8 @@ class AccueilQuadManager {
         // 4. Réinitialiser les sélections
         this.selectedRack = null;
         this.selectedLevel = null;
-        document.getElementById('accueilSelectedRack').textContent = 'Aucun rack sélectionné';
-        document.getElementById('accueilLevelInfo').textContent = 'Aucun étage';
+        document.getElementById('accueilSelectedRack').textContent = '';
+        document.getElementById('accueilLevelInfo').textContent = '';
     }
 
     normalizeRackData() {
