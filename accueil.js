@@ -5929,18 +5929,23 @@ async function handleStockAction(type, popup, initialData) {
                 break;
 
             case 'in':
-                mouvementData.raison = document.getElementById('inReason').value || '';
-                mouvementData.commentaire = document.getElementById('inNotes').value || '';
-                mouvementData.notes = document.getElementById('inNotes').value || '';
+                mouvementData.raison = document.getElementById('inReason')?.value || '';
+                mouvementData.commentaire = document.getElementById('inNotes')?.value || '';
+                mouvementData.notes = document.getElementById('inNotes')?.value || '';
 
-                // CHAMPS POUR ENTREES
-                mouvementData.fournisseur = document.getElementById('inSupplier').value || null;
-                mouvementData.bon_commande = document.getElementById('inPurchaseOrder').value || null;
+                // CHAMPS POUR ENTREES - VÉRIFIER L'EXISTENCE DES CHAMPS
+                mouvementData.fournisseur = document.getElementById('inSupplier')?.value || null;
+                mouvementData.bon_commande = document.getElementById('inPurchaseOrder')?.value || null;
 
+                // CORRECTION ICI : Vérifier l'existence du champ avant d'accéder à sa valeur
                 const prixUnitaireInput = document.getElementById('inUnitPrice');
-                mouvementData.prix_unitaire = prixUnitaireInput?.value ? parseFloat(prixUnitaireInput.value) : null;
+                if (prixUnitaireInput) {
+                    mouvementData.prix_unitaire = prixUnitaireInput.value ? parseFloat(prixUnitaireInput.value) : null;
+                } else {
+                    mouvementData.prix_unitaire = null;
+                }
 
-                mouvementData.emplacement = document.getElementById('inLocation').value || null;
+                mouvementData.emplacement = document.getElementById('inLocation')?.value || null;
                 break;
 
             case 'res':
@@ -6120,21 +6125,14 @@ async function handleStockAction(type, popup, initialData) {
         } else if (type === 'in') {
             updates.stock_actuel = stockApres;
 
-            // Mettre à jour le prix unitaire si fourni
+            // CORRECTION ICI AUSSI
             const prixUnitaireInput = document.getElementById('inUnitPrice');
-            if (prixUnitaireInput?.value) {
+            if (prixUnitaireInput && prixUnitaireInput.value) {
                 updates.prix_unitaire = parseFloat(prixUnitaireInput.value);
             }
         } else if (type === 'res') {
             updates.stock_reserve = reserveApres;
         }
-
-        const { error: updateError } = await supabase
-            .from('w_articles')
-            .update(updates)
-            .eq('id', articleId);
-
-        if (updateError) throw updateError;
 
         // 9. SUCCÈS
         showTemporarySuccess(`${type === 'out' ? 'Sortie' : type === 'in' ? 'Entrée' : 'Réservation'} enregistrée avec succès !`);

@@ -1,0 +1,320 @@
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+from reportlab.pdfgen import canvas
+
+def create_header_footer(canvas, doc):
+    canvas.saveState()
+    canvas.setFont('Helvetica', 9)
+    canvas.setFillColor(colors.grey)
+    canvas.drawString(2*cm, 1*cm, f"Page {doc.page}")
+    canvas.drawRightString(A4[0] - 2*cm, 1*cm, "Gestion de Stock 3D - Présentation Client")
+    canvas.restoreState()
+
+def create_stock_management_pdf(filename):
+    doc = SimpleDocTemplate(filename, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm,
+                           leftMargin=2*cm, rightMargin=2*cm)
+
+    styles = getSampleStyleSheet()
+
+    # Styles personnalisés
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#2C3E50'),
+        spaceAfter=6,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold'
+    )
+
+    subtitle_style = ParagraphStyle(
+        'CustomSubtitle',
+        parent=styles['Heading2'],
+        fontSize=16,
+        textColor=colors.HexColor('#34495E'),
+        spaceAfter=12,
+        alignment=TA_CENTER
+    )
+
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=14,
+        textColor=colors.HexColor('#2980B9'),
+        spaceAfter=8,
+        spaceBefore=12,
+        fontName='Helvetica-Bold'
+    )
+
+    subheading_style = ParagraphStyle(
+        'CustomSubheading',
+        parent=styles['Heading3'],
+        fontSize=12,
+        textColor=colors.HexColor('#16A085'),
+        spaceAfter=6,
+        spaceBefore=8,
+        fontName='Helvetica-Bold'
+    )
+
+    normal_style = ParagraphStyle(
+        'CustomNormal',
+        parent=styles['Normal'],
+        fontSize=10,
+        alignment=TA_JUSTIFY,
+        spaceAfter=6
+    )
+
+    bullet_style = ParagraphStyle(
+        'CustomBullet',
+        parent=styles['Normal'],
+        fontSize=10,
+        leftIndent=20,
+        spaceAfter=4
+    )
+
+    story = []
+
+    # PAGE 1 - TITRE ET INTRODUCTION
+    story.append(Spacer(1, 1*cm))
+    story.append(Paragraph("📦 Gestion de Stock 3D", title_style))
+    story.append(Paragraph("Solution Web Innovante de Gestion d'Entrepôt", subtitle_style))
+    story.append(Spacer(1, 0.5*cm))
+
+    info_data = [
+        ['Date :', '3 février 2026'],
+        ['Statut :', 'Opérationnel et déployable']
+    ]
+    info_table = Table(info_data, colWidths=[4*cm, 10*cm])
+    info_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#7F8C8D')),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(info_table)
+    story.append(Spacer(1, 1*cm))
+
+    # En une phrase
+    story.append(Paragraph("🎯 En une phrase", heading_style))
+    story.append(Paragraph(
+        "Une application web qui <b>révolutionne la gestion de stock</b> en combinant un système de gestion complet "
+        "avec une <b>visualisation 3D interactive</b> de votre entrepôt.",
+        normal_style
+    ))
+    story.append(Spacer(1, 0.8*cm))
+
+    # Les 5 atouts majeurs
+    story.append(Paragraph("✨ Les 5 atouts majeurs", heading_style))
+
+    atouts_data = [
+        ['🔍', 'Localisation instantanée', 'Visualisez en 3D où se trouve chaque article'],
+        ['📱', 'Scanner intégré', 'Scannez les codes-barres depuis votre téléphone mobile'],
+        ['📊', 'Dashboard temps réel', 'Statistiques, alertes stock bas, mouvements'],
+        ['🎯', 'Système de réservations', 'Attribuez des articles à vos projets'],
+        ['📄', 'Export PDF pro', 'Inventaires, rapports, étiquettes']
+    ]
+
+    atouts_table = Table(atouts_data, colWidths=[1*cm, 5*cm, 8*cm])
+    atouts_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#ECF0F1')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#BDC3C7')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(atouts_table)
+    story.append(Spacer(1, 0.8*cm))
+
+    # Bénéfices concrets
+    story.append(Paragraph("💼 Bénéfices concrets", heading_style))
+
+    benefits = [
+        ("⏱️ Gain de temps", [
+            "Trouvez un article en <b>5 secondes</b> au lieu de chercher physiquement",
+            "Scan instantané vs saisie manuelle"
+        ]),
+        ("❌ Moins d'erreurs", [
+            "Scanner automatique",
+            "Traçabilité complète des mouvements"
+        ]),
+        ("📈 Meilleure visibilité", [
+            "Vue en temps réel de votre stock",
+            "Alertes automatiques sur les ruptures"
+        ]),
+        ("💰 ROI rapide", [
+            "Aucun logiciel à installer",
+            "Infrastructure cloud incluse",
+            "Formation simple (4h)"
+        ])
+    ]
+
+    for title, items in benefits:
+        story.append(Paragraph(title, subheading_style))
+        for item in items:
+            story.append(Paragraph(f"• {item}", bullet_style))
+        story.append(Spacer(1, 0.3*cm))
+
+    story.append(PageBreak())
+
+    # PAGE 2
+    story.append(Paragraph("🛠️ Technologie", heading_style))
+
+    tech_data = [
+        ['100% Web', 'Aucune installation'],
+        ['Cloud Supabase', 'Pas de serveur à gérer'],
+        ['Responsive', 'PC, tablette, mobile'],
+        ['Sécurisé', 'Permissions personnalisables']
+    ]
+
+    tech_table = Table(tech_data, colWidths=[4*cm, 10*cm])
+    tech_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#3498DB')),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(tech_table)
+    story.append(Spacer(1, 0.8*cm))
+
+    # Ce que vous pouvez faire
+    story.append(Paragraph("📋 Ce que vous pouvez faire", heading_style))
+
+    features = [
+        "Ajouter/modifier des articles avec photo",
+        "Gérer entrées et sorties de stock",
+        "Réserver des articles pour des projets",
+        "Visualiser l'entrepôt en 3D",
+        "Scanner des codes-barres",
+        "Exporter des rapports PDF",
+        "Suivre l'historique complet",
+        "Recevoir des alertes de stock bas"
+    ]
+
+    for feature in features:
+        story.append(Paragraph(f"✅ {feature}", bullet_style))
+
+    story.append(Spacer(1, 0.8*cm))
+
+    # Ce qui nous différencie
+    story.append(Paragraph("💎 Ce qui nous différencie", heading_style))
+
+    diff_data = [
+        ['Concurrent classique', 'Notre solution'],
+        ['Liste Excel ou logiciel lourd', 'Interface web moderne'],
+        ['"L\'article est quelque part..."', 'Visualisation 3D précise'],
+        ['Saisie manuelle fastidieuse', 'Scanner intégré'],
+        ['Installation sur chaque PC', 'Accessible partout']
+    ]
+
+    diff_table = Table(diff_data, colWidths=[7*cm, 7*cm])
+    diff_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#34495E')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('BACKGROUND', (1, 1), (1, -1), colors.HexColor('#D5F4E6')),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(diff_table)
+    story.append(Spacer(1, 0.8*cm))
+
+    # Déploiement express
+    story.append(Paragraph("🚀 Déploiement express", heading_style))
+
+    deploy_data = [
+        ['Jour 1', 'Paramétrage (vos racks, level et emplacements)'],
+        ['Jour 2', 'Import de vos articles existants'],
+        ['Jour 3', 'Import de vos articles existants'],
+        ['Jour 4', 'Formation de votre équipe (4h)'],
+        ['Jour 5', 'Mise en production']
+    ]
+
+    deploy_table = Table(deploy_data, colWidths=[2.5*cm, 11.5*cm])
+    deploy_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#E74C3C')),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.white),
+        ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+        ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(deploy_table)
+    story.append(Spacer(1, 0.3*cm))
+
+    story.append(Paragraph("✨ <b>Opérationnel en 1 semaine</b>",
+                          ParagraphStyle('Highlight', parent=normal_style,
+                                       fontSize=12, textColor=colors.HexColor('#27AE60'),
+                                       alignment=TA_CENTER)))
+    story.append(Spacer(1, 0.8*cm))
+
+    # Investissement
+    story.append(Paragraph("💰 Investissement", heading_style))
+    story.append(Paragraph("<b>Inclus :</b>", subheading_style))
+
+    inclus = [
+        "Application complète",
+        "Hébergement cloud",
+        "Formation initiale",
+        "Documentation",
+        "Support 30 jours"
+    ]
+
+    for item in inclus:
+        story.append(Paragraph(f"• {item}", bullet_style))
+
+    story.append(Spacer(1, 0.8*cm))
+
+    # Prochaine étape
+    story.append(Paragraph("📞 Prochaine étape", heading_style))
+    story.append(Paragraph(
+        "🎥 <b>Démo live</b> (15 min)<br/>Voyez l'application en action avec vos cas d'usage",
+        normal_style
+    ))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph("📧 Contact : muhlemannk@gmail.com", normal_style))
+    story.append(Spacer(1, 1*cm))
+
+    # Citation finale
+    story.append(Paragraph(
+        '<i>"Transformez votre gestion de stock en expérience visuelle"</i>',
+        ParagraphStyle('Quote', parent=normal_style,
+                      fontSize=14, textColor=colors.HexColor('#2C3E50'),
+                      alignment=TA_CENTER, fontName='Helvetica-Oblique')
+    ))
+
+    # Génération du PDF
+    doc.build(story, onFirstPage=create_header_footer, onLaterPages=create_header_footer)
+    print(f"PDF créé avec succès : {filename}")
+
+# Génération du PDF
+create_stock_management_pdf("Gestion_Stock_3D_Presentation_Client.pdf")
