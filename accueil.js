@@ -3703,15 +3703,6 @@ async function loadStats() {
     }
 }
 
-async function loadAdminData() {
-    if (!currentUser.isAdmin) return;
-
-    await Promise.all([
-        loadStockBas(),
-        loadRuptures()
-    ]);
-}
-
 async function loadStockBas() {
     try {
         const { data: articles, error } = await supabase
