@@ -733,6 +733,7 @@ async function handleEditUser(e) {
 
     // Récupérer les nouvelles permissions
     const newPermissions = { accueil: true };
+    const checkboxes = document.querySelectorAll('#editPermissionsList input[type="checkbox"]');
 
     checkboxes.forEach(checkbox => {
         const key = checkbox.dataset.key;
@@ -782,9 +783,6 @@ async function handleEditUser(e) {
             return;
         }
     }
-
-    // Récupérer les nouvelles permissions
-    const checkboxes = document.querySelectorAll('#editPermissionsList input[type="checkbox"]');
 
     // VÉRIFICATION : L'admin ne peut pas donner plus que ce qu'il a
     if (!isSuperAdmin) {
