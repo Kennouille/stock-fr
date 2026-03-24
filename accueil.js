@@ -2898,7 +2898,7 @@ async function loadAdminData() {
     if (!currentUser.isAdmin) return;
 
     // Ne charger les alertes que si le plan n'est pas BASIC
-    if (currentActivePlan !== 'basic') {
+    if (currentActivePlan !== 'basic' || FORCE_ALERTES) {
         await Promise.all([
             loadStockBas(),
             loadRuptures()
