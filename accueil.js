@@ -19,7 +19,7 @@ let exportProjectBtn = null;
 let addReservationToProjectBtn = null;
 let currentActivePlan = 'basic';
 // En haut du fichier, avec les autres variables
-const FORCE_ALERTES = true; // Mettre à true pour forcer l'affichage des alertes même en plan BASIC
+const FORCE_ALERTES = false; // Mettre à true pour forcer l'affichage des alertes même en plan BASIC
 
 // ===== FONCTIONS UTILITAIRES POUR PROJETS =====
 function formatDate(dateString) {
