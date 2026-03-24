@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Configurer les événements
     setupEventListeners();
 
+    // Réinitialiser le formulaire d'ajout d'utilisateur
+    document.getElementById('addUserForm')?.reset();
+
     // Cacher le loading
     document.getElementById('loadingOverlay').style.display = 'none';
 });
