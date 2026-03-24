@@ -198,10 +198,10 @@ function toggleAlertsVisibility() {
 
     if (currentActivePlan === 'basic' && !FORCE_ALERTES) {
         if (stockBasCard) stockBasCard.style.display = 'none';
-        if (ruptionCard) ruptureCard.style.display = 'none';
+        if (ruptureCard) ruptureCard.style.display = 'none';  // ← ruptureCard, pas ruptionCard
     } else {
         if (stockBasCard) stockBasCard.style.display = 'block';
-        if (ruptionCard) ruptureCard.style.display = 'block';
+        if (ruptureCard) ruptureCard.style.display = 'block';
     }
 }
 
