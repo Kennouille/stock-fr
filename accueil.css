@@ -3323,3 +3323,31 @@ button.close-modal:hover {
     font-weight: bold;
 }
 
+/* Cacher les cartes d'actions par défaut si nécessaire */
+.action-card {
+    display: none; /* Par défaut cachées */
+}
+
+/* Les cartes seront affichées dynamiquement par JavaScript */
+.action-card[style*="display: block"] {
+    display: block !important;
+}
+
+/* Style pour le message d'alerte */
+.alert-message.info {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px;
+    text-align: center;
+}
+
+.alert-message.info i {
+    margin-right: 10px;
+    font-size: 18px;
+}
+
+.alert-message.info span {
+    vertical-align: middle;
+}

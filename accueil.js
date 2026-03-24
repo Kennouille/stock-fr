@@ -2816,45 +2816,52 @@ function toggleAdminSection() {
 
 function setupQuickActions() {
     const permissions = currentUser.permissions || {};
-    const reservationProjetBtn = document.getElementById('reservationProjetBtn');
-    const selectProjetBtn = document.getElementById('selectProjetBtn');
-    const optionsContainer = document.querySelector('.options-container');
 
-    // Vérifier si les éléments existent
-    if (!optionsContainer) return;
+    // Récupérer les cartes d'actions
+    const reservationCard = document.getElementById('reservationCard');
+    const retourProjetCard = document.getElementById('retourProjetCard');
 
-    // Récupérer tous les boutons d'actions rapides
-    const quickActionButtons = document.querySelectorAll('.option-btn');
-
-    // Cacher tous les boutons par défaut
-    quickActionButtons.forEach(btn => {
-        btn.style.display = 'none';
-    });
-
-    // Réafficher uniquement les boutons autorisés selon les permissions
-    if (permissions.projets) {
-        // Bouton "Réservation de projet" (action: reservation, type: saisie)
-        if (reservationProjetBtn) {
-            reservationProjetBtn.style.display = 'flex';
+    // Gérer l'affichage de la carte "Réservation projet" selon permission Gestion de projet (projets)
+    if (reservationCard) {
+        if (permissions.projets) {
+            reservationCard.style.display = 'block';
+        } else {
+            reservationCard.style.display = 'none';
         }
     }
 
-    if (permissions.reservations) {
-        // Bouton "Retour projet en stock" (action: return, type: scan)
-        if (selectProjetBtn) {
-            selectProjetBtn.style.display = 'flex';
+    // Gérer l'affichage de la carte "Retour projet en stock" selon permission Réservations
+    if (retourProjetCard) {
+        if (permissions.reservations) {
+            retourProjetCard.style.display = 'block';
+        } else {
+            retourProjetCard.style.display = 'none';
         }
     }
 
-    // Si l'utilisateur n'a aucune de ces permissions, afficher un message
-    const visibleButtons = Array.from(quickActionButtons).filter(btn => btn.style.display !== 'none');
-    if (visibleButtons.length === 0) {
-        optionsContainer.innerHTML = `
-            <div class="alert-message info" style="margin: 20px;">
+    // Optionnel : Vérifier si toutes les cartes sont cachées, afficher un message
+    const visibleCards = document.querySelectorAll('.action-card').length;
+    const hiddenCards = document.querySelectorAll('.action-card[style*="display: none"]').length;
+
+    if (visibleCards === hiddenCards) {
+        const actionsSection = document.querySelector('.actions-section');
+        const existingMessage = document.querySelector('.no-actions-message');
+
+        if (!existingMessage && actionsSection) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'alert-message info';
+            messageDiv.style.margin = '20px';
+            messageDiv.style.padding = '15px';
+            messageDiv.style.borderRadius = '8px';
+            messageDiv.style.backgroundColor = '#e3f2fd';
+            messageDiv.style.color = '#1976d2';
+            messageDiv.style.textAlign = 'center';
+            messageDiv.innerHTML = `
                 <i class="fas fa-info-circle"></i>
                 <span>Aucune action rapide disponible avec vos permissions actuelles</span>
-            </div>
-        `;
+            `;
+            actionsSection.appendChild(messageDiv);
+        }
     }
 }
 
