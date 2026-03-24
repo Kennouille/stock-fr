@@ -1086,3 +1086,25 @@ body {
         flex-wrap: wrap;
     }
 }
+
+.article-counter {
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.article-counter .warning {
+    color: #ff9800;
+    font-weight: bold;
+}
+
+.article-counter.limit-reached {
+    background: #ffebee;
+    color: #f44336;
+    border: 1px solid #f44336;
+}

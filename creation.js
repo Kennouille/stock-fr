@@ -1,10 +1,11 @@
 import { supabase } from './supabaseClient.js';
 
-// Éléments DOM et variables
+// Variables globales
 let currentUser = null;
 let currentPhoto = null;
 let generatedBarcode = '';
 let isManualBarcode = false;
+let currentActivePlan = 'basic'; // AJOUTÉ
 
 // Constantes
 const EAN13_PREFIX = '200'; // Préfixe pour les codes-barres générés
@@ -12,6 +13,9 @@ const EAN13_PREFIX = '200'; // Préfixe pour les codes-barres générés
 document.addEventListener('DOMContentLoaded', async function() {
     // Vérifier l'authentification
     await checkAuth();
+
+    // AJOUTER LE CHARGEMENT DU PLAN
+    await loadCurrentPlan();
 
     // Initialiser les événements
     setupEventListeners();
@@ -60,6 +64,97 @@ async function checkAuth() {
         window.location.href = 'connexion.html';
     }
 }
+
+// ===== VÉRIFICATION DES LIMITES D'ARTICLES =====
+async function checkArticleLimit() {
+    try {
+        // Compter le nombre total d'articles
+        const { count, error } = await supabase
+            .from('w_articles')
+            .select('*', { count: 'exact', head: true });
+
+        if (error) throw error;
+
+        const currentArticleCount = count || 0;
+
+        // Définir la limite selon le plan
+        let limit = Infinity;
+        let limitMessage = '';
+
+        if (currentActivePlan === 'basic') {
+            limit = 50;
+            limitMessage = `Plan BASIC : limite de 50 articles. Actuellement ${currentArticleCount} article(s).`;
+        } else if (currentActivePlan === 'premium') {
+            limit = Infinity; // Illimité
+        } else if (currentActivePlan === 'business') {
+            limit = Infinity; // Illimité
+        }
+
+        return {
+            allowed: currentArticleCount < limit,
+            currentCount: currentArticleCount,
+            limit: limit,
+            message: limitMessage
+        };
+
+    } catch (error) {
+        console.error('Erreur vérification limite:', error);
+        return { allowed: true, currentCount: 0, limit: Infinity, message: '' };
+    }
+}
+
+// ===== CHARGEMENT DU PLAN ACTIF =====
+async function loadCurrentPlan() {
+    try {
+        const { data, error } = await supabase
+            .from('w_plan')
+            .select('active_plan')
+            .limit(1)
+            .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+
+        if (data) {
+            currentActivePlan = data.active_plan;
+            console.log('Plan actif:', currentActivePlan);
+        }
+    } catch (error) {
+        console.error('Erreur chargement plan:', error);
+        currentActivePlan = 'basic';
+    }
+}
+
+// Ajouter cette fonction pour afficher le compteur
+async function updateArticleCounter() {
+    const limitCheck = await checkArticleLimit();
+    const counterElement = document.getElementById('articleCounter');
+
+    if (counterElement) {
+        if (currentActivePlan === 'basic') {
+            const remaining = limitCheck.limit - limitCheck.currentCount;
+            counterElement.innerHTML = `
+                <i class="fas fa-box"></i>
+                Articles : ${limitCheck.currentCount} / ${limitCheck.limit}
+                ${remaining <= 10 ? `<span class="warning">⚠️ Plus que ${remaining} places</span>` : ''}
+            `;
+
+            if (remaining <= 0) {
+                counterElement.classList.add('limit-reached');
+            } else {
+                counterElement.classList.remove('limit-reached');
+            }
+        } else {
+            counterElement.innerHTML = `
+                <i class="fas fa-infinity"></i>
+                Articles : ${limitCheck.currentCount} (illimité)
+            `;
+        }
+    }
+}
+
+// Appeler cette fonction après loadCurrentPlan()
+await loadCurrentPlan();
+await updateArticleCounter();
 
 // ===== INITIALISATION =====
 function initializeForm() {
@@ -773,6 +868,13 @@ async function handleFormSubmit(event) {
     const validation = validateFormData(formData);
     if (!validation.isValid) {
         showFormError(validation.message);
+        return;
+    }
+
+    // AJOUTER CETTE VÉRIFICATION DES LIMITES
+    const limitCheck = await checkArticleLimit();
+    if (!limitCheck.allowed) {
+        showFormError(`Impossible de créer un nouvel article. ${limitCheck.message}`);
         return;
     }
 
