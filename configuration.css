@@ -1065,3 +1065,12 @@ body {
 .permission-group .permission-item:hover {
     background: #f8f9fa;
 }
+
+.business-group .group-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e8f5e9 100%);
+    border-left: 3px solid #4CAF50;
+}
+
+.business-group .group-header i {
+    color: #4CAF50;
+}
