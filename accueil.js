@@ -2817,9 +2817,16 @@ function toggleAdminSection() {
 function setupQuickActions() {
     const permissions = currentUser.permissions || {};
 
+    const sortieCard = document.getElementById('sortieCard');
+    const entreeCard = document.getElementById('entreeCard');
     const reservationCard = document.getElementById('reservationCard');
     const retourProjetCard = document.getElementById('retourProjetCard');
 
+    // Toujours afficher entrée et sortie
+    if (sortieCard) sortieCard.style.display = 'block';
+    if (entreeCard) entreeCard.style.display = 'block';
+
+    // Conditionner réservation et retour projet
     if (reservationCard) {
         reservationCard.style.display = permissions.projets ? 'block' : 'none';
     }
