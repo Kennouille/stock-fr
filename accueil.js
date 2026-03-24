@@ -2818,8 +2818,18 @@ function setupQuickActions() {
     const permissions = currentUser.permissions || {};
 
     // Récupérer les cartes d'actions
+    const sortieCard = document.getElementById('sortieCard');
+    const entreeCard = document.getElementById('entreeCard');
     const reservationCard = document.getElementById('reservationCard');
     const retourProjetCard = document.getElementById('retourProjetCard');
+
+    // TOUJOURS afficher Sortie et Entrée de stock pour tous les utilisateurs
+    if (sortieCard) {
+        sortieCard.style.display = 'block';
+    }
+    if (entreeCard) {
+        entreeCard.style.display = 'block';
+    }
 
     // Gérer l'affichage de la carte "Réservation projet" selon permission Gestion de projet (projets)
     if (reservationCard) {
@@ -2839,26 +2849,30 @@ function setupQuickActions() {
         }
     }
 
-    // Optionnel : Vérifier si toutes les cartes sont cachées, afficher un message
-    const visibleCards = document.querySelectorAll('.action-card').length;
-    const hiddenCards = document.querySelectorAll('.action-card[style*="display: none"]').length;
+    // Optionnel : Vérifier si toutes les cartes optionnelles sont cachées
+    // (ne pas compter sortie et entrée dans cette vérification)
+    const optionalCards = [reservationCard, retourProjetCard].filter(card => card !== null);
+    const visibleOptionalCards = optionalCards.filter(card => card.style.display !== 'none');
 
-    if (visibleCards === hiddenCards) {
-        const actionsSection = document.querySelector('.actions-section');
-        const existingMessage = document.querySelector('.no-actions-message');
+    if (optionalCards.length > 0 && visibleOptionalCards.length === 0) {
+        const actionsSection = document.querySelector('.actions-section .actions-grid');
+        const existingMessage = document.querySelector('.no-optional-actions-message');
 
         if (!existingMessage && actionsSection) {
             const messageDiv = document.createElement('div');
-            messageDiv.className = 'alert-message info';
-            messageDiv.style.margin = '20px';
-            messageDiv.style.padding = '15px';
-            messageDiv.style.borderRadius = '8px';
-            messageDiv.style.backgroundColor = '#e3f2fd';
-            messageDiv.style.color = '#1976d2';
-            messageDiv.style.textAlign = 'center';
+            messageDiv.className = 'info-message optional-actions-message';
+            messageDiv.style.cssText = `
+                grid-column: span 2;
+                background: #e3f2fd;
+                padding: 15px;
+                border-radius: 8px;
+                text-align: center;
+                color: #1976d2;
+                font-size: 14px;
+            `;
             messageDiv.innerHTML = `
                 <i class="fas fa-info-circle"></i>
-                <span>Aucune action rapide disponible avec vos permissions actuelles</span>
+                <span>Aucune action de réservation disponible avec vos permissions actuelles</span>
             `;
             actionsSection.appendChild(messageDiv);
         }
