@@ -412,7 +412,7 @@ function openEditModal(user) {
 }
 
 // ===== AJOUT D'UTILISATEUR =====
-ddocument.getElementById('addUserForm')?.addEventListener('submit', async function(e) {
+document.getElementById('addUserForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const username = document.getElementById('newUsername').value.trim();
