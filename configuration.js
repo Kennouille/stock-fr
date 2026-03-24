@@ -681,7 +681,7 @@ async function handleEditUser(e) {
 
     // VÉRIFICATION : L'admin ne peut pas donner plus que ce qu'il a
     if (!isSuperAdmin) {
-        checkboxes.forEach(checkbox => {
+        for (const checkbox of checkboxes) {
             const key = checkbox.dataset.key;
             const isChecked = checkbox.checked;
 
@@ -690,7 +690,7 @@ async function handleEditUser(e) {
                 showError(errorDiv, errorText, `Vous ne pouvez pas donner la permission "${key}" car vous ne l'avez pas vous-même`);
                 return;
             }
-        });
+        }
     }
 
     checkboxes.forEach(checkbox => {
@@ -746,7 +746,7 @@ async function handleEditUser(e) {
             }
         }
 
-        showSuccessMessage('Utilisateur modifié avec succès');
+        alert('Utilisateur modifié avec succès');
 
     } catch (error) {
         console.error('Erreur lors de la modification de l\'utilisateur:', error);
