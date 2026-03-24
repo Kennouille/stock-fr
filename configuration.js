@@ -7,6 +7,7 @@ const SUPERADMIN_USERNAME = 'Kennouille';
 const SUPERADMIN_CODE = '109801';
 let isSuperAdmin = false;
 let currentUserPermissions = {};
+let currentActivePlan = 'basic';
 
 document.addEventListener('DOMContentLoaded', async function() {
     // Vérifier l'authentification
@@ -352,18 +353,19 @@ async function loadCurrentPlan() {
     try {
         const { data, error } = await supabase
             .from('w_plan')
-            .select('*')
+            .select('active_plan')
             .limit(1)
             .single();
 
         if (error && error.code !== 'PGRST116') throw error;
 
         if (data) {
-            currentPlan = data.active_plan;
-            updatePlanSelection(currentPlan);
+            currentActivePlan = data.active_plan;
+            updatePlanSelection(currentActivePlan);
         }
     } catch (error) {
         console.error('Erreur chargement plan:', error);
+        currentActivePlan = 'basic';
     }
 }
 
@@ -450,11 +452,64 @@ function setupPlanEvents() {
     });
 }
 
+function checkUserLimits(plan, currentUsersCount, currentAdminsCount, newUserIsAdmin) {
+    // Compter les utilisateurs existants (hors SuperAdmin)
+    const regularUsersCount = currentUsersCount;
+    const adminsCount = currentAdminsCount;
+
+    if (plan === 'basic') {
+        // Basic: 1 Admin + 1 Utilisateur maximum
+        if (newUserIsAdmin && adminsCount >= 1) {
+            return { allowed: false, message: 'Plan BASIC : 1 administrateur maximum déjà atteint' };
+        }
+        if (!newUserIsAdmin && regularUsersCount >= 1) {
+            return { allowed: false, message: 'Plan BASIC : 1 utilisateur maximum déjà atteint' };
+        }
+        return { allowed: true };
+    }
+
+    if (plan === 'premium') {
+        // Premium: 1 Admin + 10 Utilisateurs maximum
+        if (newUserIsAdmin && adminsCount >= 2) {
+            return { allowed: false, message: 'Plan PREMIUM : 2 administrateur maximum déjà atteint' };
+        }
+        if (!newUserIsAdmin && regularUsersCount >= 10) {
+            return { allowed: false, message: 'Plan PREMIUM : 10 utilisateurs maximum déjà atteint' };
+        }
+        return { allowed: true };
+    }
+
+    // Business: illimité
+    return { allowed: true };
+}
+
 // ===== MODAL D'ÉDITION =====
 function openEditModal(user) {
     const modal = document.getElementById('editUserModal');
     const form = document.getElementById('editUserForm');
     const isSuperAdminUser = user.username === SUPERADMIN_USERNAME;
+
+    // Compter les utilisateurs actuels (hors SuperAdmin)
+    const currentUsers = allUsers.filter(u => u.username !== SUPERADMIN_USERNAME);
+    const currentAdminsCount = currentUsers.filter(u => u.permissions?.config === true).length;
+    const currentUsersCount = currentUsers.filter(u => u.permissions?.config !== true).length;
+
+    // Vérifier si on peut ajouter un admin selon le plan
+    let canAddAdmin = true;
+    let adminLimitMessage = '';
+
+    if (currentActivePlan === 'basic') {
+        canAddAdmin = currentAdminsCount < 1;
+        adminLimitMessage = 'Plan BASIC : 1 administrateur maximum';
+    } else if (currentActivePlan === 'premium') {
+        canAddAdmin = currentAdminsCount < 2;
+        adminLimitMessage = 'Plan PREMIUM : 2 administrateur maximum';
+    }
+
+    // Pour l'utilisateur courant, on ne bloque pas la modification de sa propre permission admin
+    const isEditingSelf = user.id === currentUser.id;
+    // Vérifier si l'utilisateur modifié est déjà admin
+    const isCurrentlyAdmin = user.permissions?.config === true;
 
     // Remplir le formulaire
     document.getElementById('editUserId').value = user.id;
@@ -502,6 +557,10 @@ function openEditModal(user) {
             // L'admin n'a pas cette permission, il ne peut pas la donner aux autres
             isDisabled = true;
             disabledReason = `Vous n'avez pas cette permission (${perm.label})`;
+        } else if (perm.key === 'config' && !isEditingSelf && !isCurrentlyAdmin && !canAddAdmin) {
+            // Bloquer l'ajout d'un nouvel admin si le plan ne le permet pas
+            isDisabled = true;
+            disabledReason = adminLimitMessage;
         }
 
         const div = document.createElement('div');
@@ -535,6 +594,9 @@ document.getElementById('addUserForm')?.addEventListener('submit', async functio
     const errorDiv = document.getElementById('addUserError');
     const errorText = document.getElementById('addUserErrorText');
 
+    // Vérifier si l'utilisateur a la permission config (admin)
+    const isNewUserAdmin = document.getElementById('perm_config').checked;
+
     // Validation
     if (!username || !password) {
         showError(errorDiv, errorText, 'Veuillez remplir tous les champs');
@@ -556,6 +618,18 @@ document.getElementById('addUserForm')?.addEventListener('submit', async functio
         return;
     }
 
+    // Compter les utilisateurs actuels (hors SuperAdmin)
+    const currentUsers = allUsers.filter(u => u.username !== SUPERADMIN_USERNAME);
+    const currentAdminsCount = currentUsers.filter(u => u.permissions?.config === true).length;
+    const currentUsersCount = currentUsers.filter(u => u.permissions?.config !== true).length;
+
+    // Vérifier les limites selon le plan
+    const limitCheck = checkUserLimits(currentActivePlan, currentUsersCount, currentAdminsCount, isNewUserAdmin);
+    if (!limitCheck.allowed) {
+        showError(errorDiv, errorText, limitCheck.message);
+        return;
+    }
+
     // Récupérer les permissions
     const permissions = {
         accueil: true
@@ -563,7 +637,7 @@ document.getElementById('addUserForm')?.addEventListener('submit', async functio
 
     const permissionKeys = ['config', 'creation', 'stats', 'historique', 'impression', 'gestion', 'projets', 'reservations', 'vuestock'];
 
-    // VÉRIFICATION : L'admin ne peut donner que ce qu'il a
+    // Vérification : L'admin ne peut donner que ce qu'il a
     for (const key of permissionKeys) {
         const checkbox = document.getElementById(`perm_${key}`);
         const isChecked = checkbox.checked;
@@ -656,6 +730,41 @@ async function handleEditUser(e) {
     if (!user) return;
 
     const isSuperAdminUser = user.username === SUPERADMIN_USERNAME;
+
+    // Récupérer les nouvelles permissions
+    const newPermissions = { accueil: true };
+    const checkboxes = document.querySelectorAll('#editPermissionsList input[type="checkbox"]');
+
+    checkboxes.forEach(checkbox => {
+        const key = checkbox.dataset.key;
+        newPermissions[key] = checkbox.checked;
+    });
+
+    const isNewUserAdmin = newPermissions.config;
+    const wasAdmin = user.permissions?.config === true;
+
+    // Si on essaie de passer un utilisateur de non-admin à admin
+    if (!wasAdmin && isNewUserAdmin && !isSuperAdminUser) {
+        // Compter les admins actuels (hors SuperAdmin)
+        const currentUsers = allUsers.filter(u => u.username !== SUPERADMIN_USERNAME && u.id !== userId);
+        const currentAdminsCount = currentUsers.filter(u => u.permissions?.config === true).length;
+
+        let canAddAdmin = true;
+        let limitMessage = '';
+
+        if (currentActivePlan === 'basic') {
+            canAddAdmin = currentAdminsCount < 1;
+            limitMessage = 'Plan BASIC : 1 administrateur maximum';
+        } else if (currentActivePlan === 'premium') {
+            canAddAdmin = currentAdminsCount < 1;
+            limitMessage = 'Plan PREMIUM : 1 administrateur maximum';
+        }
+
+        if (!canAddAdmin) {
+            showError(errorDiv, errorText, limitMessage);
+            return;
+        }
+    }
 
     // Validation du nom d'utilisateur
     if (!isSuperAdminUser && newUsername.length < 3) {
