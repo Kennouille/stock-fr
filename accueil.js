@@ -2817,65 +2817,15 @@ function toggleAdminSection() {
 function setupQuickActions() {
     const permissions = currentUser.permissions || {};
 
-    // Récupérer les cartes d'actions
-    const sortieCard = document.getElementById('sortieCard');
-    const entreeCard = document.getElementById('entreeCard');
     const reservationCard = document.getElementById('reservationCard');
     const retourProjetCard = document.getElementById('retourProjetCard');
 
-    // TOUJOURS afficher Sortie et Entrée de stock pour tous les utilisateurs
-    if (sortieCard) {
-        sortieCard.style.display = 'block';
-    }
-    if (entreeCard) {
-        entreeCard.style.display = 'block';
-    }
-
-    // Gérer l'affichage de la carte "Réservation projet" selon permission Gestion de projet (projets)
     if (reservationCard) {
-        if (permissions.projets) {
-            reservationCard.style.display = 'block';
-        } else {
-            reservationCard.style.display = 'none';
-        }
+        reservationCard.style.display = permissions.projets ? 'block' : 'none';
     }
 
-    // Gérer l'affichage de la carte "Retour projet en stock" selon permission Réservations
     if (retourProjetCard) {
-        if (permissions.reservations) {
-            retourProjetCard.style.display = 'block';
-        } else {
-            retourProjetCard.style.display = 'none';
-        }
-    }
-
-    // Optionnel : Vérifier si toutes les cartes optionnelles sont cachées
-    // (ne pas compter sortie et entrée dans cette vérification)
-    const optionalCards = [reservationCard, retourProjetCard].filter(card => card !== null);
-    const visibleOptionalCards = optionalCards.filter(card => card.style.display !== 'none');
-
-    if (optionalCards.length > 0 && visibleOptionalCards.length === 0) {
-        const actionsSection = document.querySelector('.actions-section .actions-grid');
-        const existingMessage = document.querySelector('.no-optional-actions-message');
-
-        if (!existingMessage && actionsSection) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'info-message optional-actions-message';
-            messageDiv.style.cssText = `
-                grid-column: span 2;
-                background: #e3f2fd;
-                padding: 15px;
-                border-radius: 8px;
-                text-align: center;
-                color: #1976d2;
-                font-size: 14px;
-            `;
-            messageDiv.innerHTML = `
-                <i class="fas fa-info-circle"></i>
-                <span>Aucune action de réservation disponible avec vos permissions actuelles</span>
-            `;
-            actionsSection.appendChild(messageDiv);
-        }
+        retourProjetCard.style.display = permissions.reservations ? 'block' : 'none';
     }
 }
 
