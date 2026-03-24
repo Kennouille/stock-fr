@@ -733,7 +733,6 @@ async function handleEditUser(e) {
 
     // Récupérer les nouvelles permissions
     const newPermissions = { accueil: true };
-    const checkboxes = document.querySelectorAll('#editPermissionsList input[type="checkbox"]');
 
     checkboxes.forEach(checkbox => {
         const key = checkbox.dataset.key;
