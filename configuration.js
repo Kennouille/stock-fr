@@ -6,6 +6,7 @@ let allUsers = [];
 const SUPERADMIN_USERNAME = 'Kennouille';
 const SUPERADMIN_CODE = '109801';
 let isSuperAdmin = false;
+let currentUserPermissions = {};
 
 document.addEventListener('DOMContentLoaded', async function() {
     // Vérifier l'authentification
@@ -33,7 +34,6 @@ function generateUUID() {
 // ===== AUTHENTIFICATION =====
 async function checkAuth() {
     try {
-        // Récupérer l'utilisateur depuis sessionStorage
         const userJson = sessionStorage.getItem('current_user');
 
         if (!userJson) {
@@ -42,6 +42,19 @@ async function checkAuth() {
         }
 
         currentUser = JSON.parse(userJson);
+
+        // Charger les permissions de l'utilisateur depuis la base
+        const { data, error } = await supabase
+            .from('w_users')
+            .select('permissions')
+            .eq('id', currentUser.id)
+            .single();
+
+        if (!error && data) {
+            currentUserPermissions = data.permissions || {};
+            // Mettre à jour currentUser
+            currentUser.permissions = currentUserPermissions;
+        }
 
         // Vérifier les permissions
         if (!currentUser.permissions?.config) {
@@ -346,20 +359,35 @@ function openEditModal(user) {
 
     const allPermissions = [
         { id: 'edit_perm_config', key: 'config', label: 'Configuration', icon: 'fa-cog', desc: 'Admin - Gérer les utilisateurs' },
-        { id: 'edit_perm_creation', key: 'creation', label: 'CrÉation article', icon: 'fa-plus-circle', desc: 'CrÉer de nouveaux articles' },
+        { id: 'edit_perm_creation', key: 'creation', label: 'Création article', icon: 'fa-plus-circle', desc: 'Créer de nouveaux articles' },
         { id: 'edit_perm_stats', key: 'stats', label: 'Statistiques', icon: 'fa-chart-bar', desc: 'Voir les rapports et stats' },
         { id: 'edit_perm_historique', key: 'historique', label: 'Historique', icon: 'fa-history', desc: 'Consulter l\'historique' },
-        { id: 'edit_perm_impression', key: 'impression', label: 'Impression', icon: 'fa-print', desc: 'Imprimer Étiquettes et rapports' },
+        { id: 'edit_perm_impression', key: 'impression', label: 'Impression', icon: 'fa-print', desc: 'Imprimer étiquettes et rapports' },
         { id: 'edit_perm_gestion', key: 'gestion', label: 'Gestion articles', icon: 'fa-box-open', desc: 'Modifier/supprimer articles' },
-        { id: 'edit_perm_projets', key: 'projets', label: 'Gestion projets', icon: 'fa-project-diagram', desc: 'CrÉer/gÉrer les projets' },
-        { id: 'edit_perm_reservations', key: 'reservations', label: 'RÉservations', icon: 'fa-clipboard-list', desc: 'GÉrer les rÉservations' },
+        { id: 'edit_perm_projets', key: 'projets', label: 'Gestion projets', icon: 'fa-project-diagram', desc: 'Créer/gérer les projets' },
+        { id: 'edit_perm_reservations', key: 'reservations', label: 'Réservations', icon: 'fa-clipboard-list', desc: 'Gérer les réservations' },
         { id: 'edit_perm_vuestock', key: 'vuestock', label: 'Vue Stock', icon: 'fa-eye', desc: 'Visualiser le stock complet' }
     ];
 
     allPermissions.forEach(perm => {
         const isChecked = user.permissions?.[perm.key] || false;
-        const isDisabled = isSuperAdminUser && !isSuperAdmin; // Bloqué si pas SuperAdmin
-        const isCurrentUserConfig = user.username === currentUser.username && perm.key === 'config';
+        const isSuperAdminUser = user.username === SUPERADMIN_USERNAME;
+
+        // Déterminer si la case doit être désactivée
+        let isDisabled = false;
+        let disabledReason = '';
+
+        if (isSuperAdminUser && !isSuperAdmin) {
+            isDisabled = true;
+            disabledReason = 'Seul le SuperAdmin peut modifier';
+        } else if (user.id === currentUser.id && perm.key === 'config') {
+            isDisabled = true;
+            disabledReason = 'Ne peut pas désactiver sa propre permission admin';
+        } else if (!isSuperAdmin && !currentUserPermissions[perm.key]) {
+            // L'admin n'a pas cette permission, il ne peut pas la donner aux autres
+            isDisabled = true;
+            disabledReason = `Vous n'avez pas cette permission (${perm.label})`;
+        }
 
         const div = document.createElement('div');
         div.className = 'permission-item';
@@ -368,13 +396,12 @@ function openEditModal(user) {
                    id="${perm.id}"
                    ${isChecked ? 'checked' : ''}
                    ${isDisabled ? 'disabled' : ''}
-                   ${isCurrentUserConfig ? 'disabled' : ''}
                    data-key="${perm.key}">
-            <label for="${perm.id}">
+            <label for="${perm.id}" ${isDisabled ? 'style="opacity:0.6;"' : ''}>
                 <i class="fas ${perm.icon}"></i>
                 <span>${perm.label}</span>
                 <small>${perm.desc}</small>
-                ${isCurrentUserConfig ? '<br><small class="text-warning"><i class="fas fa-info-circle"></i> Ne peut pas dÉsactiver sa propre permission admin</small>' : ''}
+                ${disabledReason ? `<br><small class="text-muted">🔒 ${disabledReason}</small>` : ''}
             </label>
         `;
         permissionsList.appendChild(div);
@@ -385,7 +412,7 @@ function openEditModal(user) {
 }
 
 // ===== AJOUT D'UTILISATEUR =====
-document.getElementById('addUserForm')?.addEventListener('submit', async function(e) {
+ddocument.getElementById('addUserForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const username = document.getElementById('newUsername').value.trim();
@@ -416,16 +443,23 @@ document.getElementById('addUserForm')?.addEventListener('submit', async functio
 
     // Récupérer les permissions
     const permissions = {
-        accueil: true // Toujours vrai
+        accueil: true
     };
 
-    // Liste des permissions
     const permissionKeys = ['config', 'creation', 'stats', 'historique', 'impression', 'gestion', 'projets', 'reservations', 'vuestock'];
 
-    permissionKeys.forEach(key => {
+    // VÉRIFICATION : L'admin ne peut donner que ce qu'il a
+    for (const key of permissionKeys) {
         const checkbox = document.getElementById(`perm_${key}`);
-        permissions[key] = checkbox.checked;
-    });
+        const isChecked = checkbox.checked;
+
+        if (isChecked && !isSuperAdmin && !currentUserPermissions[key]) {
+            showError(errorDiv, errorText, `Vous ne pouvez pas donner la permission "${key}" car vous ne l'avez pas vous-même`);
+            return;
+        }
+
+        permissions[key] = isChecked;
+    }
 
     try {
         // Insérer le nouvel utilisateur
@@ -435,7 +469,7 @@ document.getElementById('addUserForm')?.addEventListener('submit', async functio
                 {
                     id: generateUUID(),
                     username: username,
-                    password: password, // À sécuriser plus tard avec bcrypt
+                    password: password,
                     permissions: permissions
                 }
             ]);
@@ -508,13 +542,13 @@ async function handleEditUser(e) {
 
     const isSuperAdminUser = user.username === SUPERADMIN_USERNAME;
 
-    // Validation
+    // Validation du nom d'utilisateur
     if (!isSuperAdminUser && newUsername.length < 3) {
         showError(errorDiv, errorText, 'Le nom d\'utilisateur doit contenir au moins 3 caractères');
         return;
     }
 
-    // Vérifier si le nom d'utilisateur existe déjà (sauf pour le même utilisateur)
+    // Vérifier si le nom d'utilisateur existe déjà
     if (!isSuperAdminUser && newUsername !== user.username) {
         const usernameExists = allUsers.some(u =>
             u.id !== userId && u.username.toLowerCase() === newUsername.toLowerCase()
@@ -529,6 +563,20 @@ async function handleEditUser(e) {
     // Récupérer les nouvelles permissions
     const newPermissions = { accueil: true };
     const checkboxes = document.querySelectorAll('#editPermissionsList input[type="checkbox"]');
+
+    // VÉRIFICATION : L'admin ne peut pas donner plus que ce qu'il a
+    if (!isSuperAdmin) {
+        checkboxes.forEach(checkbox => {
+            const key = checkbox.dataset.key;
+            const isChecked = checkbox.checked;
+
+            // Si la case est cochée mais que l'admin n'a pas cette permission
+            if (isChecked && !currentUserPermissions[key]) {
+                showError(errorDiv, errorText, `Vous ne pouvez pas donner la permission "${key}" car vous ne l'avez pas vous-même`);
+                return;
+            }
+        });
+    }
 
     checkboxes.forEach(checkbox => {
         const key = checkbox.dataset.key;
@@ -574,6 +622,7 @@ async function handleEditUser(e) {
         if (user.username === currentUser.username) {
             const updatedUser = { ...currentUser, ...updateData };
             sessionStorage.setItem('current_user', JSON.stringify(updatedUser));
+            currentUserPermissions = newPermissions;
 
             // Si il s'est retiré admin, rediriger
             if (!newPermissions.config && user.permissions?.config) {
@@ -581,6 +630,8 @@ async function handleEditUser(e) {
                 window.location.href = 'accueil.html';
             }
         }
+
+        showSuccessMessage('Utilisateur modifié avec succès');
 
     } catch (error) {
         console.error('Erreur lors de la modification de l\'utilisateur:', error);
