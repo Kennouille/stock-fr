@@ -21,6 +21,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Réinitialiser le formulaire d'ajout d'utilisateur
     document.getElementById('addUserForm')?.reset();
 
+    // Charger le plan actuel
+    await loadCurrentPlan();
+
+    // Configurer les événements des plans
+    setupPlanEvents();
+
     // Cacher le loading
     document.getElementById('loadingOverlay').style.display = 'none';
 });
@@ -333,6 +339,114 @@ function setupUserActionButtons() {
             const user = allUsers.find(u => u.id === userId);
             if (user) {
                 confirmDeleteUser(user);
+            }
+        });
+    });
+}
+
+// Gestion des plans de souscription
+let currentPlan = null;
+let isSuperAdminForPlans = false;
+
+async function loadCurrentPlan() {
+    try {
+        const { data, error } = await supabase
+            .from('w_plan')
+            .select('*')
+            .limit(1)
+            .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+
+        if (data) {
+            currentPlan = data.active_plan;
+            updatePlanSelection(currentPlan);
+        }
+    } catch (error) {
+        console.error('Erreur chargement plan:', error);
+    }
+}
+
+function updatePlanSelection(plan) {
+    // Réinitialiser tous les cards
+    document.querySelectorAll('.plan-card').forEach(card => {
+        card.classList.remove('active');
+    });
+
+    // Réinitialiser les checkboxes
+    document.querySelectorAll('.plan-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+
+    // Activer le plan sélectionné
+    if (plan === 'basic') {
+        document.getElementById('planBasic').classList.add('active');
+        document.getElementById('planBasicCheckbox').checked = true;
+    } else if (plan === 'premium') {
+        document.getElementById('planPremium').classList.add('active');
+        document.getElementById('planPremiumCheckbox').checked = true;
+    } else if (plan === 'business') {
+        document.getElementById('planBusiness').classList.add('active');
+        document.getElementById('planBusinessCheckbox').checked = true;
+    }
+}
+
+async function updatePlan(plan) {
+    try {
+        const { error } = await supabase
+            .from('w_plan')
+            .upsert({
+                id: 1,
+                active_plan: plan,
+                updated_at: new Date().toISOString()
+            });
+
+        if (error) throw error;
+
+        currentPlan = plan;
+        updatePlanSelection(plan);
+        alert(`Plan ${plan.toUpperCase()} activé avec succès !`);
+
+    } catch (error) {
+        console.error('Erreur mise à jour plan:', error);
+        alert('Erreur lors de la mise à jour du plan');
+        // Recharger le plan actuel en cas d'erreur
+        await loadCurrentPlan();
+    }
+}
+
+function setupPlanEvents() {
+    const isSuperAdminForPlans = isSuperAdmin;
+
+    const checkboxes = document.querySelectorAll('.plan-checkbox');
+
+    checkboxes.forEach(checkbox => {
+        // Désactiver si pas SuperAdmin
+        if (!isSuperAdminForPlans) {
+            checkbox.disabled = true;
+            checkbox.parentElement.querySelector('label').style.opacity = '0.5';
+        }
+
+        checkbox.addEventListener('change', async function(e) {
+            if (!isSuperAdminForPlans) {
+                e.preventDefault();
+                alert('Seul le SuperAdmin peut modifier le plan de souscription');
+                this.checked = false;
+                return;
+            }
+
+            const plan = this.dataset.plan;
+
+            // Si la case est cochée, activer ce plan
+            if (this.checked) {
+                // Décocher les autres checkboxes
+                checkboxes.forEach(cb => {
+                    if (cb !== this) cb.checked = false;
+                });
+                await updatePlan(plan);
+            } else {
+                // Si on décoche, ne rien faire (on garde le plan actuel)
+                await loadCurrentPlan();
             }
         });
     });
