@@ -416,36 +416,34 @@ async function updatePlan(plan) {
 }
 
 function setupPlanEvents() {
-    const isSuperAdminForPlans = isSuperAdmin;
-
     const checkboxes = document.querySelectorAll('.plan-checkbox');
 
     checkboxes.forEach(checkbox => {
-        // Désactiver si pas SuperAdmin
-        if (!isSuperAdminForPlans) {
+        // Si ce n'est pas le SuperAdmin, la case est désactivée (lecture seule)
+        if (!isSuperAdmin) {
             checkbox.disabled = true;
-            checkbox.parentElement.querySelector('label').style.opacity = '0.5';
+            const label = checkbox.parentElement.querySelector('label');
+            if (label) {
+                label.style.opacity = '0.5';
+                label.style.cursor = 'default';
+            }
         }
 
         checkbox.addEventListener('change', async function(e) {
-            if (!isSuperAdminForPlans) {
+            if (!isSuperAdmin) {
                 e.preventDefault();
-                alert('Seul le SuperAdmin peut modifier le plan de souscription');
                 this.checked = false;
                 return;
             }
 
             const plan = this.dataset.plan;
 
-            // Si la case est cochée, activer ce plan
             if (this.checked) {
-                // Décocher les autres checkboxes
                 checkboxes.forEach(cb => {
                     if (cb !== this) cb.checked = false;
                 });
                 await updatePlan(plan);
             } else {
-                // Si on décoche, ne rien faire (on garde le plan actuel)
                 await loadCurrentPlan();
             }
         });
