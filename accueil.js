@@ -17,6 +17,9 @@ let archiveProjectBtn = null;
 let editProjectBtn = null;
 let exportProjectBtn = null;
 let addReservationToProjectBtn = null;
+let currentActivePlan = 'basic';
+// En haut du fichier, avec les autres variables
+const FORCE_ALERTES = false; // Mettre à true pour forcer l'affichage des alertes même en plan BASIC
 
 // ===== FONCTIONS UTILITAIRES POUR PROJETS =====
 function formatDate(dateString) {
@@ -165,6 +168,41 @@ function showAlert(message, type = 'info') {
             alertDiv.parentNode.removeChild(alertDiv);
         }
     }, 5000);
+}
+
+// ===== CHARGEMENT DU PLAN ACTIF =====
+async function loadCurrentPlan() {
+    try {
+        const { data, error } = await supabase
+            .from('w_plan')
+            .select('active_plan')
+            .limit(1)
+            .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+
+        if (data) {
+            currentActivePlan = data.active_plan;
+            console.log('Plan actif:', currentActivePlan);
+        }
+    } catch (error) {
+        console.error('Erreur chargement plan:', error);
+        currentActivePlan = 'basic';
+    }
+}
+
+// ===== GESTION DES ALERTES SELON LE PLAN =====
+function toggleAlertsVisibility() {
+    const stockBasCard = document.querySelector('.alert-card:first-child');
+    const ruptureCard = document.querySelector('.alert-card:last-child');
+
+    if (currentActivePlan === 'basic' && !FORCE_ALERTES) {
+        if (stockBasCard) stockBasCard.style.display = 'none';
+        if (ruptionCard) ruptureCard.style.display = 'none';
+    } else {
+        if (stockBasCard) stockBasCard.style.display = 'block';
+        if (ruptionCard) ruptureCard.style.display = 'block';
+    }
 }
 
 // ===== GESTION DES MODALS =====
@@ -2721,6 +2759,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Vérifier l'authentification
     await checkAuth();
 
+    // Charger le plan actif en premier
+    await loadCurrentPlan();
+
     // Charger les données
     await loadPageData();
 
@@ -2838,17 +2879,31 @@ function setupQuickActions() {
 
 // ===== CHARGEMENT DES DONNÉES =====
 async function loadPageData() {
-    await Promise.all([
-        loadStats(),
-        loadAdminData()
-    ]);
+    await loadCurrentPlan();
+    toggleAlertsVisibility();
+    await loadStats();
 
-    // Mettre à jour la dernière synchronisation
+    // Charger les alertes si plan pas BASIC OU si FORCE_ALERTES est true
+    if (currentActivePlan !== 'basic' || FORCE_ALERTES) {
+        await loadAdminData();
+    }
+
     updateLastSync();
 
-    // Ajoute ces lignes où tu initialises les événements
     document.getElementById('exportStockBasBtn')?.addEventListener('click', exportStockBasPDF);
     document.getElementById('exportRuptureBtn')?.addEventListener('click', exportRupturePDF);
+}
+
+async function loadAdminData() {
+    if (!currentUser.isAdmin) return;
+
+    // Ne charger les alertes que si le plan n'est pas BASIC
+    if (currentActivePlan !== 'basic') {
+        await Promise.all([
+            loadStockBas(),
+            loadRuptures()
+        ]);
+    }
 }
 
 // ===== GESTION DU SCANNER/RECHERCHE POUR RETOUR D'ARTICLE =====

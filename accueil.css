@@ -3351,3 +3351,34 @@ button.close-modal:hover {
 .alert-message.info span {
     vertical-align: middle;
 }
+
+/* Message pour plan BASIC */
+.alert-info-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-left: 4px solid #6c757d;
+    padding: 20px;
+    border-radius: 12px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.alert-info-card i {
+    font-size: 2rem;
+    color: #6c757d;
+}
+
+.alert-info-card h4 {
+    margin: 0 0 8px 0;
+    color: #495057;
+}
+
+.alert-info-card p {
+    margin: 0 0 4px 0;
+    color: #6c757d;
+}
+
+.alert-info-card small {
+    color: #adb5bd;
+}
