@@ -2766,6 +2766,9 @@ async function checkAuth() {
         // Afficher/cacher la section admin
         toggleAdminSection();
 
+        // Configurer les actions rapides selon les permissions
+        setupQuickActions();
+
         // Cacher le loading
         loadingOverlay.style.display = 'none';
 
@@ -2808,6 +2811,50 @@ function toggleAdminSection() {
         setupAdminButtons();
     } else {
         adminSection.style.display = 'none';
+    }
+}
+
+function setupQuickActions() {
+    const permissions = currentUser.permissions || {};
+    const reservationProjetBtn = document.getElementById('reservationProjetBtn');
+    const selectProjetBtn = document.getElementById('selectProjetBtn');
+    const optionsContainer = document.querySelector('.options-container');
+
+    // Vérifier si les éléments existent
+    if (!optionsContainer) return;
+
+    // Récupérer tous les boutons d'actions rapides
+    const quickActionButtons = document.querySelectorAll('.option-btn');
+
+    // Cacher tous les boutons par défaut
+    quickActionButtons.forEach(btn => {
+        btn.style.display = 'none';
+    });
+
+    // Réafficher uniquement les boutons autorisés selon les permissions
+    if (permissions.projets) {
+        // Bouton "Réservation de projet" (action: reservation, type: saisie)
+        if (reservationProjetBtn) {
+            reservationProjetBtn.style.display = 'flex';
+        }
+    }
+
+    if (permissions.reservations) {
+        // Bouton "Retour projet en stock" (action: return, type: scan)
+        if (selectProjetBtn) {
+            selectProjetBtn.style.display = 'flex';
+        }
+    }
+
+    // Si l'utilisateur n'a aucune de ces permissions, afficher un message
+    const visibleButtons = Array.from(quickActionButtons).filter(btn => btn.style.display !== 'none');
+    if (visibleButtons.length === 0) {
+        optionsContainer.innerHTML = `
+            <div class="alert-message info" style="margin: 20px;">
+                <i class="fas fa-info-circle"></i>
+                <span>Aucune action rapide disponible avec vos permissions actuelles</span>
+            </div>
+        `;
     }
 }
 
