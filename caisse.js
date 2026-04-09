@@ -70,21 +70,11 @@ async function loadCurrentUser() {
 }
 
 async function loadTaxConfig() {
-    try {
-        const { data: config, error } = await supabase
-            .from('w_config')
-            .select('caisse_enabled, tax_enabled, tax_rate')
-            .single();
-
-        if (!error && config) {
-            taxEnabled = config.tax_enabled || false;
-            taxRate = config.tax_rate || 20;
-            taxRateSpan.textContent = taxRate;
-            taxLine.style.display = taxEnabled ? 'flex' : 'none';
-        }
-    } catch (error) {
-        console.log('Config par défaut');
-    }
+    const perms = currentUser.permissions;
+    taxEnabled = perms?.caisse_tax_enabled || false;
+    taxRate = perms?.caisse_tax_rate || 20;
+    if (taxRateSpan) taxRateSpan.textContent = taxRate;
+    if (taxLine) taxLine.style.display = taxEnabled ? 'flex' : 'none';
 }
 
 async function checkCaisseAccess() {
