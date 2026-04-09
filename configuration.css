@@ -1209,7 +1209,7 @@ body {
 
 .toggle-switch {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 16px;
 }
 
@@ -1248,9 +1248,10 @@ body {
 
 .toggle-switch label {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: center;   /* ← manquait */
     flex-wrap: wrap;
+    gap: 4px;
+    cursor: pointer;
 }
 
 .toggle-switch label strong {
