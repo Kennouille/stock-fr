@@ -59,22 +59,14 @@ async function init() {
 }
 
 async function loadCurrentUser() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const userJson = sessionStorage.getItem('current_user');
+    if (!userJson) {
         window.location.href = 'accueil.html';
         return;
     }
 
-    const { data: userData } = await supabase
-        .from('w_users')
-        .select('id, username, permissions')
-        .eq('id', user.id)
-        .single();
-
-    if (userData) {
-        currentUser = userData;
-        usernameDisplay.textContent = userData.username;
-    }
+    currentUser = JSON.parse(userJson);
+    usernameDisplay.textContent = currentUser.username;
 }
 
 async function loadTaxConfig() {
