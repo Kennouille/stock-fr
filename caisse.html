@@ -6,329 +6,318 @@
     <title>Caisse — NeXeN Store</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="caisse.css">
 </head>
 <body>
-    <div class="app">
+<div class="app">
 
-        <!-- SIDEBAR GAUCHE -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <a href="accueil.html" class="back-btn">
-                    <i class="fas fa-chevron-left"></i>
-                </a>
-                <div class="logo">
-                    <i class="fas fa-cash-register"></i>
-                    <span>Caisse</span>
-                </div>
-                <div class="user-badge">
-                    <i class="fas fa-user-circle"></i>
-                    <span id="usernameDisplay">...</span>
-                </div>
+    <!-- ══ SIDEBAR ══ -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <a href="accueil.html" class="back-btn"><i class="fas fa-chevron-left"></i> Retour</a>
+            <div class="sidebar-title">
+                <i class="fas fa-cash-register"></i>
+                <span>Caisse</span>
             </div>
-
-            <!-- SCAN -->
-            <div class="panel">
-                <div class="panel-label"><i class="fas fa-barcode"></i> Scanner</div>
-                <div class="scan-group">
-                    <input type="text" id="scanInput" placeholder="Code-barres..." autofocus>
-                    <button id="scanBtn"><i class="fas fa-bolt"></i></button>
-                </div>
-                <p class="hint">Appuyez sur Entrée après le scan</p>
-            </div>
-
-            <!-- RECHERCHE NOM -->
-            <div class="panel">
-                <div class="panel-label"><i class="fas fa-search"></i> Recherche</div>
-                <div class="scan-group">
-                    <input type="text" id="searchNameInput" placeholder="Nom de l'article..." autocomplete="off">
-                    <button id="searchNameBtn"><i class="fas fa-search"></i></button>
-                </div>
-                <div id="searchResults" class="search-results" style="display:none;">
-                    <div class="results-header">
-                        <span>Résultats</span>
-                        <button id="closeResultsBtn"><i class="fas fa-times"></i></button>
-                    </div>
-                    <div id="resultsList"></div>
-                </div>
-            </div>
-
-            <!-- CONSULTATION PRIX -->
-            <div class="panel">
-                <div class="panel-label"><i class="fas fa-tag"></i> Prix rapide</div>
-                <div class="scan-group">
-                    <input type="text" id="priceCheckInput" placeholder="Scanner un article...">
-                    <button id="priceCheckBtn"><i class="fas fa-eye"></i></button>
-                </div>
-                <div id="priceDisplay" class="price-display" style="display:none;">
-                    <div class="price-article-name"></div>
-                    <div class="price-value"></div>
-                    <div class="price-tax"></div>
-                </div>
-            </div>
-
-            <!-- LOGOUT -->
-            <button id="logoutBtn" class="logout-btn">
-                <i class="fas fa-sign-out-alt"></i> Déconnexion
-            </button>
-        </aside>
-
-        <!-- CONTENU PRINCIPAL -->
-        <main class="main">
-
-            <!-- PANIER -->
-            <section class="cart-section">
-                <div class="cart-header">
-                    <h2><i class="fas fa-shopping-basket"></i> Panier</h2>
-                    <button id="clearCartBtn" class="btn-clear">
-                        <i class="fas fa-trash"></i> Vider
-                    </button>
-                </div>
-
-                <div class="cart-table-wrap">
-                    <table class="cart-table">
-                        <thead>
-                            <tr>
-                                <th>Article</th>
-                                <th>Prix TTC</th>
-                                <th>Qté</th>
-                                <th>Total</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="cartBody">
-                            <tr class="empty-row">
-                                <td colspan="5">
-                                    <div class="empty-state">
-                                        <i class="fas fa-shopping-basket"></i>
-                                        <span>Panier vide</span>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- PAIEMENT -->
-            <section class="payment-section">
-
-                <!-- TOTAUX -->
-                <div class="totals-block">
-                    <div class="total-row" id="taxLine" style="display:none;">
-                        <span class="total-label">TVA incluse (<span id="taxRate">20</span>%)</span>
-                        <span class="total-val muted" id="totalTVA">0.00 €</span>
-                    </div>
-                    <div class="total-row grand">
-                        <span class="total-label">Total TTC</span>
-                        <span class="total-val" id="totalTTC">0.00 €</span>
-                    </div>
-                </div>
-
-                <!-- BILLETS & PIÈCES -->
-                <div class="money-section">
-                    <div class="money-label-row">
-                        <span class="money-section-label">Montant remis</span>
-                        <div class="amount-display">
-                            <span id="amountGivenDisplay">0.00 €</span>
-                            <button class="btn-reset-amount" id="resetAmountBtn"><i class="fas fa-times"></i></button>
-                        </div>
-                    </div>
-
-                    <div class="bills-group">
-                        <span class="group-label">Billets</span>
-                        <div class="bills-grid">
-                            <div class="bill-item" data-value="5">
-                                <div class="bill-visual bill-5">
-                                    <span class="bill-amount">5€</span>
-                                    <div class="bill-stripe"></div>
-                                </div>
-                                <div class="bill-controls">
-                                    <button class="qty-btn minus" data-value="5"><i class="fas fa-minus"></i></button>
-                                    <span class="qty-count" id="count-5">0</span>
-                                    <button class="qty-btn plus money-btn" data-value="5"><i class="fas fa-plus"></i></button>
-                                </div>
-                            </div>
-                            <div class="bill-item" data-value="10">
-                                <div class="bill-visual bill-10">
-                                    <span class="bill-amount">10€</span>
-                                    <div class="bill-stripe"></div>
-                                </div>
-                                <div class="bill-controls">
-                                    <button class="qty-btn minus" data-value="10"><i class="fas fa-minus"></i></button>
-                                    <span class="qty-count" id="count-10">0</span>
-                                    <button class="qty-btn plus money-btn" data-value="10"><i class="fas fa-plus"></i></button>
-                                </div>
-                            </div>
-                            <div class="bill-item" data-value="20">
-                                <div class="bill-visual bill-20">
-                                    <span class="bill-amount">20€</span>
-                                    <div class="bill-stripe"></div>
-                                </div>
-                                <div class="bill-controls">
-                                    <button class="qty-btn minus" data-value="20"><i class="fas fa-minus"></i></button>
-                                    <span class="qty-count" id="count-20">0</span>
-                                    <button class="qty-btn plus money-btn" data-value="20"><i class="fas fa-plus"></i></button>
-                                </div>
-                            </div>
-                            <div class="bill-item" data-value="50">
-                                <div class="bill-visual bill-50">
-                                    <span class="bill-amount">50€</span>
-                                    <div class="bill-stripe"></div>
-                                </div>
-                                <div class="bill-controls">
-                                    <button class="qty-btn minus" data-value="50"><i class="fas fa-minus"></i></button>
-                                    <span class="qty-count" id="count-50">0</span>
-                                    <button class="qty-btn plus money-btn" data-value="50"><i class="fas fa-plus"></i></button>
-                                </div>
-                            </div>
-                            <div class="bill-item" data-value="100">
-                                <div class="bill-visual bill-100">
-                                    <span class="bill-amount">100€</span>
-                                    <div class="bill-stripe"></div>
-                                </div>
-                                <div class="bill-controls">
-                                    <button class="qty-btn minus" data-value="100"><i class="fas fa-minus"></i></button>
-                                    <span class="qty-count" id="count-100">0</span>
-                                    <button class="qty-btn plus money-btn" data-value="100"><i class="fas fa-plus"></i></button>
-                                </div>
-                            </div>
-                            <div class="bill-item" data-value="200">
-                                <div class="bill-visual bill-200">
-                                    <span class="bill-amount">200€</span>
-                                    <div class="bill-stripe"></div>
-                                </div>
-                                <div class="bill-controls">
-                                    <button class="qty-btn minus" data-value="200"><i class="fas fa-minus"></i></button>
-                                    <span class="qty-count" id="count-200">0</span>
-                                    <button class="qty-btn plus money-btn" data-value="200"><i class="fas fa-plus"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="coins-group">
-                        <span class="group-label">Pièces</span>
-                        <div class="coins-grid">
-                            <div class="coin-item" data-value="0.01">
-                                <div class="coin-visual coin-001"><span>1c</span></div>
-                                <div class="bill-controls">
-                                    <button class="qty-btn minus" data-value="0.01"><i class="fas fa-minus"></i></button>
-                                    <span class="qty-count" id="count-001">0</span>
-                                    <button class="qty-btn plus money-btn" data-value="0.01"><i class="fas fa-plus"></i></button>
-                                </div>
-                            </div>
-                            <div class="coin-item" data-value="0.02">
-                                <div class="coin-visual coin-002"><span>2c</span></div>
-                                <div class="bill-controls">
-                                    <button class="qty-btn minus" data-value="0.02"><i class="fas fa-minus"></i></button>
-                                    <span class="qty-count" id="count-002">0</span>
-                                    <button class="qty-btn plus money-btn" data-value="0.02"><i class="fas fa-plus"></i></button>
-                                </div>
-                            </div>
-                            <div class="coin-item" data-value="0.05">
-                                <div class="coin-visual coin-005"><span>5c</span></div>
-                                <div class="bill-controls">
-                                    <button class="qty-btn minus" data-value="0.05"><i class="fas fa-minus"></i></button>
-                                    <span class="qty-count" id="count-005">0</span>
-                                    <button class="qty-btn plus money-btn" data-value="0.05"><i class="fas fa-plus"></i></button>
-                                </div>
-                            </div>
-                            <div class="coin-item" data-value="0.10">
-                                <div class="coin-visual coin-010"><span>10c</span></div>
-                                <div class="bill-controls">
-                                    <button class="qty-btn minus" data-value="0.10"><i class="fas fa-minus"></i></button>
-                                    <span class="qty-count" id="count-010">0</span>
-                                    <button class="qty-btn plus money-btn" data-value="0.10"><i class="fas fa-plus"></i></button>
-                                </div>
-                            </div>
-                            <div class="coin-item" data-value="0.20">
-                                <div class="coin-visual coin-020"><span>20c</span></div>
-                                <div class="bill-controls">
-                                    <button class="qty-btn minus" data-value="0.20"><i class="fas fa-minus"></i></button>
-                                    <span class="qty-count" id="count-020">0</span>
-                                    <button class="qty-btn plus money-btn" data-value="0.20"><i class="fas fa-plus"></i></button>
-                                </div>
-                            </div>
-                            <div class="coin-item" data-value="0.50">
-                                <div class="coin-visual coin-050"><span>50c</span></div>
-                                <div class="bill-controls">
-                                    <button class="qty-btn minus" data-value="0.50"><i class="fas fa-minus"></i></button>
-                                    <span class="qty-count" id="count-050">0</span>
-                                    <button class="qty-btn plus money-btn" data-value="0.50"><i class="fas fa-plus"></i></button>
-                                </div>
-                            </div>
-                            <div class="coin-item" data-value="1">
-                                <div class="coin-visual coin-1"><span>1€</span></div>
-                                <div class="bill-controls">
-                                    <button class="qty-btn minus" data-value="1"><i class="fas fa-minus"></i></button>
-                                    <span class="qty-count" id="count-1">0</span>
-                                    <button class="qty-btn plus money-btn" data-value="1"><i class="fas fa-plus"></i></button>
-                                </div>
-                            </div>
-                            <div class="coin-item" data-value="2">
-                                <div class="coin-visual coin-2"><span>2€</span></div>
-                                <div class="bill-controls">
-                                    <button class="qty-btn minus" data-value="2"><i class="fas fa-minus"></i></button>
-                                    <span class="qty-count" id="count-2">0</span>
-                                    <button class="qty-btn plus money-btn" data-value="2"><i class="fas fa-plus"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- MONNAIE À RENDRE -->
-                <div id="changeDisplay" class="change-display" style="display:none;">
-                    <div class="change-inner">
-                        <span class="change-label">Monnaie à rendre</span>
-                        <span class="change-amount" id="changeAmount">0.00 €</span>
-                    </div>
-                </div>
-                <div id="insufficientDisplay" class="insufficient-display" style="display:none;">
-                    <div class="insufficient-inner">
-                        <span class="insuf-label">Montant insuffisant</span>
-                        <span class="insuf-amount" id="missingAmount">— €</span>
-                    </div>
-                </div>
-
-                <!-- VALIDER -->
-                <button id="validateSaleBtn" class="btn-validate" disabled>
-                    <i class="fas fa-check-circle"></i>
-                    <span>Valider la vente</span>
-                    <span class="btn-total" id="btnTotal">0.00 €</span>
-                </button>
-
-            </section>
-        </main>
-    </div>
-
-    <!-- MODAL QUANTITÉ -->
-    <div id="quantityModal" class="modal-overlay" style="display:none;">
-        <div class="modal-box">
-            <div class="modal-top">
-                <h3 id="quantityArticleName">Article</h3>
-                <button class="close-modal"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="modal-mid">
-                <div class="qty-row">
-                    <button class="qty-ctrl minus-qty">−</button>
-                    <input type="number" id="modalQuantity" value="1" min="1">
-                    <button class="qty-ctrl plus-qty">+</button>
-                </div>
-                <div class="stock-badge">
-                    <i class="fas fa-boxes"></i> Stock : <strong id="availableStock">0</strong>
-                </div>
-            </div>
-            <div class="modal-bot">
-                <button id="confirmQuantityBtn" class="btn-confirm">Ajouter au panier</button>
-                <button class="btn-cancel close-modal">Annuler</button>
+            <div class="user-chip">
+                <i class="fas fa-user"></i>
+                <span id="usernameDisplay">…</span>
             </div>
         </div>
-    </div>
 
-    <script type="module" src="caisse.js"></script>
+        <div class="card">
+            <div class="card-label"><i class="fas fa-barcode"></i> Scanner un code-barres</div>
+            <div class="input-row">
+                <input type="text" id="scanInput" placeholder="Code-barres…" autofocus>
+                <button id="scanBtn" class="btn-icon-accent"><i class="fas fa-bolt"></i></button>
+            </div>
+            <span class="hint">Appuyez sur Entrée après le scan</span>
+        </div>
+
+        <div class="card">
+            <div class="card-label"><i class="fas fa-search"></i> Rechercher un article</div>
+            <div class="input-row">
+                <input type="text" id="searchNameInput" placeholder="Nom de l'article…" autocomplete="off">
+                <button id="searchNameBtn" class="btn-icon-accent"><i class="fas fa-search"></i></button>
+            </div>
+            <div id="searchResults" class="search-results" style="display:none;">
+                <div class="results-header">
+                    <span>Résultats</span>
+                    <button id="closeResultsBtn"><i class="fas fa-times"></i></button>
+                </div>
+                <div id="resultsList"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-label"><i class="fas fa-tag"></i> Consultation prix</div>
+            <div class="input-row">
+                <input type="text" id="priceCheckInput" placeholder="Scanner un article…">
+                <button id="priceCheckBtn" class="btn-icon-warn"><i class="fas fa-eye"></i></button>
+            </div>
+            <div id="priceDisplay" class="price-display" style="display:none;">
+                <div class="price-article-name"></div>
+                <div class="price-value"></div>
+                <div class="price-tax"></div>
+            </div>
+        </div>
+
+        <button id="logoutBtn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
+    </aside>
+
+    <!-- ══ MAIN ══ -->
+    <main class="main">
+
+        <!-- PANIER -->
+        <section class="cart-section">
+            <div class="section-head">
+                <h2><i class="fas fa-shopping-basket"></i> Panier en cours</h2>
+                <button id="clearCartBtn" class="btn-danger-ghost"><i class="fas fa-trash"></i> Vider</button>
+            </div>
+            <div class="cart-wrap">
+                <table class="cart-table">
+                    <thead>
+                        <tr>
+                            <th>Article</th>
+                            <th>Prix unit. TTC</th>
+                            <th>Qté</th>
+                            <th>Total TTC</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="cartBody">
+                        <tr class="empty-row">
+                            <td colspan="5">
+                                <div class="empty-state">
+                                    <i class="fas fa-basket-shopping"></i>
+                                    <span>Panier vide — scannez ou recherchez un article</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- PAIEMENT -->
+        <section class="pay-section">
+
+            <div class="totals-bar">
+                <div class="total-item" id="taxLine" style="display:none;">
+                    <span class="t-label">TVA incluse (<span id="taxRate">20</span>%)</span>
+                    <span class="t-val muted" id="totalTVA">0,00 €</span>
+                </div>
+                <div class="total-item grand">
+                    <span class="t-label">Total TTC</span>
+                    <span class="t-val" id="totalTTC">0,00 €</span>
+                </div>
+                <div class="total-item">
+                    <span class="t-label">Montant remis</span>
+                    <div class="given-row">
+                        <span id="amountGivenDisplay">0,00 €</span>
+                        <button id="resetAmountBtn" title="Remettre à zéro"><i class="fas fa-rotate-left"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BILLETS -->
+            <div class="money-block">
+                <div class="money-block-title"><i class="fas fa-money-bill-wave"></i> Billets</div>
+                <div class="bills-grid">
+                    <div class="money-item" data-value="5">
+                        <img src="images/5.png" alt="5€" class="money-img bill-img">
+                        <div class="money-controls">
+                            <button class="mc-btn minus" data-value="5"><i class="fas fa-minus"></i></button>
+                            <span class="mc-count" id="count-5">0</span>
+                            <button class="mc-btn plus money-btn" data-value="5"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="money-item" data-value="10">
+                        <img src="images/10.png" alt="10€" class="money-img bill-img">
+                        <div class="money-controls">
+                            <button class="mc-btn minus" data-value="10"><i class="fas fa-minus"></i></button>
+                            <span class="mc-count" id="count-10">0</span>
+                            <button class="mc-btn plus money-btn" data-value="10"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="money-item" data-value="20">
+                        <img src="images/20.png" alt="20€" class="money-img bill-img">
+                        <div class="money-controls">
+                            <button class="mc-btn minus" data-value="20"><i class="fas fa-minus"></i></button>
+                            <span class="mc-count" id="count-20">0</span>
+                            <button class="mc-btn plus money-btn" data-value="20"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="money-item" data-value="50">
+                        <img src="images/50.png" alt="50€" class="money-img bill-img">
+                        <div class="money-controls">
+                            <button class="mc-btn minus" data-value="50"><i class="fas fa-minus"></i></button>
+                            <span class="mc-count" id="count-50">0</span>
+                            <button class="mc-btn plus money-btn" data-value="50"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="money-item" data-value="100">
+                        <img src="images/100.png" alt="100€" class="money-img bill-img">
+                        <div class="money-controls">
+                            <button class="mc-btn minus" data-value="100"><i class="fas fa-minus"></i></button>
+                            <span class="mc-count" id="count-100">0</span>
+                            <button class="mc-btn plus money-btn" data-value="100"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="money-item" data-value="200">
+                        <img src="images/200.png" alt="200€" class="money-img bill-img">
+                        <div class="money-controls">
+                            <button class="mc-btn minus" data-value="200"><i class="fas fa-minus"></i></button>
+                            <span class="mc-count" id="count-200">0</span>
+                            <button class="mc-btn plus money-btn" data-value="200"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PIÈCES -->
+            <div class="money-block">
+                <div class="money-block-title"><i class="fas fa-coins"></i> Pièces</div>
+                <div class="coins-grid">
+                    <div class="money-item" data-value="0.01">
+                        <img src="images/001.png" alt="1c" class="money-img coin-img">
+                        <div class="money-controls">
+                            <button class="mc-btn minus" data-value="0.01"><i class="fas fa-minus"></i></button>
+                            <span class="mc-count" id="count-001">0</span>
+                            <button class="mc-btn plus money-btn" data-value="0.01"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="money-item" data-value="0.02">
+                        <img src="images/002.png" alt="2c" class="money-img coin-img">
+                        <div class="money-controls">
+                            <button class="mc-btn minus" data-value="0.02"><i class="fas fa-minus"></i></button>
+                            <span class="mc-count" id="count-002">0</span>
+                            <button class="mc-btn plus money-btn" data-value="0.02"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="money-item" data-value="0.05">
+                        <img src="images/005.png" alt="5c" class="money-img coin-img">
+                        <div class="money-controls">
+                            <button class="mc-btn minus" data-value="0.05"><i class="fas fa-minus"></i></button>
+                            <span class="mc-count" id="count-005">0</span>
+                            <button class="mc-btn plus money-btn" data-value="0.05"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="money-item" data-value="0.10">
+                        <img src="images/010.png" alt="10c" class="money-img coin-img">
+                        <div class="money-controls">
+                            <button class="mc-btn minus" data-value="0.10"><i class="fas fa-minus"></i></button>
+                            <span class="mc-count" id="count-010">0</span>
+                            <button class="mc-btn plus money-btn" data-value="0.10"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="money-item" data-value="0.20">
+                        <img src="images/020.png" alt="20c" class="money-img coin-img">
+                        <div class="money-controls">
+                            <button class="mc-btn minus" data-value="0.20"><i class="fas fa-minus"></i></button>
+                            <span class="mc-count" id="count-020">0</span>
+                            <button class="mc-btn plus money-btn" data-value="0.20"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="money-item" data-value="0.50">
+                        <img src="images/050.png" alt="50c" class="money-img coin-img">
+                        <div class="money-controls">
+                            <button class="mc-btn minus" data-value="0.50"><i class="fas fa-minus"></i></button>
+                            <span class="mc-count" id="count-050">0</span>
+                            <button class="mc-btn plus money-btn" data-value="0.50"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="money-item" data-value="1">
+                        <img src="images/1.png" alt="1€" class="money-img coin-img">
+                        <div class="money-controls">
+                            <button class="mc-btn minus" data-value="1"><i class="fas fa-minus"></i></button>
+                            <span class="mc-count" id="count-1">0</span>
+                            <button class="mc-btn plus money-btn" data-value="1"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="money-item" data-value="2">
+                        <img src="images/2.png" alt="2€" class="money-img coin-img">
+                        <div class="money-controls">
+                            <button class="mc-btn minus" data-value="2"><i class="fas fa-minus"></i></button>
+                            <span class="mc-count" id="count-2">0</span>
+                            <button class="mc-btn plus money-btn" data-value="2"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="changeDisplay" class="feedback-bar success" style="display:none;">
+                <div class="fb-left"><i class="fas fa-check-circle"></i><span>Monnaie à rendre</span></div>
+                <span class="fb-amount" id="changeAmount">0,00 €</span>
+            </div>
+            <div id="insufficientDisplay" class="feedback-bar danger" style="display:none;">
+                <div class="fb-left"><i class="fas fa-exclamation-circle"></i><span>Montant insuffisant</span></div>
+                <span class="fb-amount" id="missingAmount">0,00 €</span>
+            </div>
+
+            <button id="validateSaleBtn" class="btn-validate" disabled>
+                <i class="fas fa-check-circle"></i>
+                <span>Valider la vente</span>
+                <span class="btn-total-badge" id="btnTotal">0,00 €</span>
+            </button>
+
+        </section>
+    </main>
+</div>
+
+<!-- MODAL QUANTITÉ -->
+<div id="quantityModal" class="overlay" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3 id="quantityArticleName">Article</h3>
+            <button class="close-modal btn-close"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="qty-row">
+                <button class="qty-ctrl minus-qty">−</button>
+                <input type="number" id="modalQuantity" value="1" min="1">
+                <button class="qty-ctrl plus-qty">+</button>
+            </div>
+            <div class="stock-chip"><i class="fas fa-boxes"></i> Stock disponible : <strong id="availableStock">0</strong></div>
+        </div>
+        <div class="modal-foot">
+            <button id="confirmQuantityBtn" class="btn-primary">Ajouter au panier</button>
+            <button class="btn-ghost close-modal">Annuler</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CONFIRMATION VENTE -->
+<div id="saleModal" class="overlay" style="display:none;">
+    <div class="modal-box sale-modal-box">
+        <div class="sale-check"><i class="fas fa-check"></i></div>
+        <h2 class="sale-title">Vente enregistrée !</h2>
+        <div class="sale-amounts">
+            <div class="sale-row">
+                <span>Total TTC</span>
+                <strong id="saleTotal">0,00 €</strong>
+            </div>
+            <div class="sale-row">
+                <span>Montant reçu</span>
+                <strong id="saleReceived">0,00 €</strong>
+            </div>
+            <div class="sale-row change-highlight">
+                <span>Monnaie à rendre</span>
+                <strong id="saleChange">0,00 €</strong>
+            </div>
+        </div>
+        <div class="sale-btns">
+            <button id="printTicketBtn" class="btn-print"><i class="fas fa-print"></i> Imprimer le ticket</button>
+            <button id="closeSaleBtn" class="btn-primary-lg">OK — Nouvelle vente</button>
+        </div>
+    </div>
+</div>
+
+<!-- TICKET IMPRESSION -->
+<div id="ticketPrint" style="display:none;"></div>
+
+<script type="module" src="caisse.js"></script>
 </body>
 </html>
