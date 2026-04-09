@@ -67,7 +67,7 @@ async function loadCurrentUser() {
 
     const { data: userData } = await supabase
         .from('w_users')
-        .select('username, permissions')
+        .select('id, username, permissions')
         .eq('id', user.id)
         .single();
 
@@ -96,18 +96,7 @@ async function loadTaxConfig() {
 }
 
 async function checkCaisseAccess() {
-    if (!currentUser) return;
-
-    const hasCaissePerm = currentUser.permissions?.caisse === true;
-    const isModuleEnabled = currentUser.permissions?.caisse_module_enabled === true;
-
-    console.log('hasCaissePerm:', hasCaissePerm);
-    console.log('isModuleEnabled:', isModuleEnabled);
-
-    if (!isModuleEnabled || !hasCaissePerm) {
-        alert(JSON.stringify(currentUser.permissions));  // ← au lieu de la redirection
-        // window.location.href = 'accueil.html';
-    }
+    alert('user: ' + JSON.stringify(currentUser));
 }
 
 // ==================== ÉVÉNEMENTS ====================
