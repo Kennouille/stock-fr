@@ -1249,19 +1249,19 @@ body {
 .toggle-switch label {
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: baseline;
     flex-wrap: wrap;
-    gap: 5px;
+    gap: 8px;
 }
 
 .toggle-switch label span {
-    display: inline;
-    white-space: nowrap;
+    display: inline-block;
 }
 
 .toggle-switch label small {
-    display: inline;
-    white-space: normal;
+    display: inline-block;
+    font-weight: normal;
+    color: #718096;
 }
 
 .toggle-switch label i {
