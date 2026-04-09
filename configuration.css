@@ -1391,3 +1391,27 @@ body {
         opacity: 1;
     }
 }
+
+.toggle-label-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.toggle-text {
+    flex: 1;
+}
+
+.toggle-text span {
+    display: block;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 4px;
+}
+
+.toggle-text small {
+    display: block;
+    color: #718096;
+    font-size: 0.8rem;
+    font-weight: normal;
+}
