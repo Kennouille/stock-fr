@@ -21,6 +21,10 @@ let currentActivePlan = 'basic';
 // En haut du fichier, avec les autres variables
 const FORCE_ALERTES = false; // Mettre à true pour forcer l'affichage des alertes même en plan BASIC
 
+// Variables pour la caisse
+let caisseModuleEnabled = false;
+let currentUserPermissionsForCaisse = {};
+
 // ===== FONCTIONS UTILITAIRES POUR PROJETS =====
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
@@ -2810,13 +2814,68 @@ async function checkAuth() {
         // Configurer les actions rapides selon les permissions
         setupQuickActions();
 
+        // ===== NOUVEAU : Vérifier l'accès à la caisse =====
+        await checkCaisseAccess();
+
         // Cacher le loading
         loadingOverlay.style.display = 'none';
+
 
     } catch (error) {
         console.error('Erreur d\'authentification:', error);
         sessionStorage.removeItem('current_user');
         window.location.href = 'connexion.html';
+    }
+}
+
+// ===== VÉRIFICATION ACCÈS CAISSE =====
+async function checkCaisseAccess() {
+    try {
+        // 1. Vérifier si le module caisse est activé dans la configuration
+        const { data: config, error: configError } = await supabase
+            .from('w_config')
+            .select('caisse_enabled')
+            .single();
+
+        if (configError && configError.code !== 'PGRST116') {
+            console.error('Erreur chargement config caisse:', configError);
+            caisseModuleEnabled = false;
+        } else {
+            caisseModuleEnabled = config?.caisse_enabled === true;
+        }
+
+        // 2. Vérifier si l'utilisateur connecté a la permission "caisse"
+        const hasCaissePermission = currentUser?.permissions?.caisse === true;
+
+        // 3. Afficher ou masquer le bloc caisse
+        const caisseCard = document.getElementById('caisseCard');
+        if (caisseCard) {
+            if (caisseModuleEnabled && hasCaissePermission) {
+                caisseCard.style.display = 'block';
+                console.log('✅ Module Caisse activé et accessible');
+            } else {
+                caisseCard.style.display = 'none';
+                if (!caisseModuleEnabled) {
+                    console.log('❌ Module Caisse désactivé dans la configuration');
+                }
+                if (!hasCaissePermission) {
+                    console.log('❌ Permission Caisse non accordée à cet utilisateur');
+                }
+            }
+        }
+
+        // 4. Ajouter l'événement d'ouverture de la caisse
+        const openCaisseBtn = document.getElementById('openCaisseBtn');
+        if (openCaisseBtn) {
+            openCaisseBtn.addEventListener('click', () => {
+                window.location.href = 'caisse.html';
+            });
+        }
+
+    } catch (error) {
+        console.error('Erreur vérification accès caisse:', error);
+        const caisseCard = document.getElementById('caisseCard');
+        if (caisseCard) caisseCard.style.display = 'none';
     }
 }
 

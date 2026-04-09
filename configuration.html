@@ -319,6 +319,68 @@
                 </div>
             </section>
 
+            <!-- Section Module Caisse (NOUVEAU) -->
+            <section class="caisse-config-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-cash-register"></i> Module Caisse de magasin</h2>
+                    <span class="badge caisse-badge">Nouveau</span>
+                </div>
+
+                <div class="caisse-config-card">
+                    <div class="config-group">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="caisseEnabled">
+                            <label for="caisseEnabled">
+                                <i class="fas fa-store"></i>
+                                <span>Activer le module Caisse</span>
+                                <small>Permet d'utiliser la caisse de magasin dans les actions rapides</small>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="config-group" id="taxConfigGroup" style="display: none;">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="taxEnabled">
+                            <label for="taxEnabled">
+                                <i class="fas fa-percent"></i>
+                                <span>Activer la TVA</span>
+                                <small>Afficher les prix TTC et calculer la TVA</small>
+                            </label>
+                        </div>
+
+                        <div class="tax-rate-group" id="taxRateGroup" style="display: none;">
+                            <label for="taxRate">
+                                <i class="fas fa-calculator"></i> Taux de TVA (%)
+                            </label>
+                            <div class="tax-input-group">
+                                <input type="number"
+                                       id="taxRate"
+                                       value="20"
+                                       step="0.1"
+                                       min="0"
+                                       max="100"
+                                       class="form-input">
+                                <span class="tax-unit">%</span>
+                            </div>
+                            <small class="form-help">Exemples : 20 (TVA normale), 10 (TVA intermédiaire), 5.5 (TVA réduite)</small>
+                        </div>
+                    </div>
+
+                    <div class="config-info">
+                        <i class="fas fa-info-circle"></i>
+                        <div class="info-content">
+                            <strong>Informations :</strong>
+                            <ul>
+                                <li>Le module caisse permet de gérer les ventes en magasin</li>
+                                <li>Les utilisateurs doivent avoir la permission "Caisse" pour y accéder</li>
+                                <li>Les ventes sont enregistrées dans les mouvements (type: sortie, motif: vente)</li>
+                                <li>Le stock est automatiquement diminué lors d'une vente</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Gestion des utilisateurs -->
             <section class="users-section">
                 <div class="section-header">
@@ -488,6 +550,26 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Groupe 5: Module Caisse (NOUVEAU) -->
+                            <div class="permission-group caisse-group">
+                                <div class="group-header">
+                                    <i class="fas fa-cash-register"></i>
+                                    <span>Module Caisse</span>
+                                </div>
+                                <div class="permissions-list">
+                                    <div class="permission-item">
+                                        <input type="checkbox" id="perm_caisse">
+                                        <label for="perm_caisse">
+                                            <i class="fas fa-cash-register"></i>
+                                            <span>Caisse de magasin</span>
+                                            <small>Accéder à la caisse pour vendre des articles</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+
                         </div>
 
                         <div id="addUserError" class="error-message" style="display: none;">

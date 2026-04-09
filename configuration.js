@@ -9,6 +9,11 @@ let isSuperAdmin = false;
 let currentUserPermissions = {};
 let currentActivePlan = 'basic';
 
+// Variables pour la configuration caisse
+let caisseEnabled = false;
+let taxEnabled = false;
+let taxRate = 20;
+
 document.addEventListener('DOMContentLoaded', async function() {
     // Vérifier l'authentification
     await checkAuth();
@@ -24,6 +29,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Charger le plan actuel
     await loadCurrentPlan();
+
+    // Charger la configuration caisse
+    await loadCaisseConfig();
 
     // Configurer les événements des plans
     setupPlanEvents();
@@ -369,6 +377,102 @@ async function loadCurrentPlan() {
     }
 }
 
+// ===== CONFIGURATION CAISSE =====
+async function loadCaisseConfig() {
+    try {
+        // Vérifier si la table w_config existe, sinon la créer
+        const { data: config, error } = await supabase
+            .from('w_config')
+            .select('caisse_enabled, tax_enabled, tax_rate')
+            .single();
+
+        if (error && error.code === 'PGRST116') {
+            // La table n'existe pas ou est vide, créer la configuration par défaut
+            const { error: insertError } = await supabase
+                .from('w_config')
+                .insert({
+                    id: 1,
+                    caisse_enabled: false,
+                    tax_enabled: false,
+                    tax_rate: 20,
+                    updated_at: new Date().toISOString()
+                });
+
+            if (!insertError) {
+                caisseEnabled = false;
+                taxEnabled = false;
+                taxRate = 20;
+                updateCaisseUI();
+            }
+        } else if (!error && config) {
+            caisseEnabled = config.caisse_enabled || false;
+            taxEnabled = config.tax_enabled || false;
+            taxRate = config.tax_rate || 20;
+            updateCaisseUI();
+        }
+    } catch (error) {
+        console.error('Erreur chargement config caisse:', error);
+    }
+}
+
+function updateCaisseUI() {
+    const caisseCheckbox = document.getElementById('caisseEnabled');
+    const taxCheckbox = document.getElementById('taxEnabled');
+    const taxRateInput = document.getElementById('taxRate');
+    const taxConfigGroup = document.getElementById('taxConfigGroup');
+    const taxRateGroup = document.getElementById('taxRateGroup');
+
+    if (caisseCheckbox) caisseCheckbox.checked = caisseEnabled;
+    if (taxCheckbox) taxCheckbox.checked = taxEnabled;
+    if (taxRateInput) taxRateInput.value = taxRate;
+
+    if (taxConfigGroup) {
+        taxConfigGroup.style.display = caisseEnabled ? 'block' : 'none';
+    }
+
+    if (taxRateGroup) {
+        taxRateGroup.style.display = taxEnabled && caisseEnabled ? 'flex' : 'none';
+    }
+}
+
+async function saveCaisseConfig() {
+    const newCaisseEnabled = document.getElementById('caisseEnabled')?.checked || false;
+    const newTaxEnabled = document.getElementById('taxEnabled')?.checked || false;
+    const newTaxRate = parseFloat(document.getElementById('taxRate')?.value) || 20;
+
+    try {
+        const { error } = await supabase
+            .from('w_config')
+            .upsert({
+                id: 1,
+                caisse_enabled: newCaisseEnabled,
+                tax_enabled: newTaxEnabled,
+                tax_rate: newTaxRate,
+                updated_at: new Date().toISOString()
+            });
+
+        if (error) throw error;
+
+        caisseEnabled = newCaisseEnabled;
+        taxEnabled = newTaxEnabled;
+        taxRate = newTaxRate;
+
+        updateCaisseUI();
+
+        // Afficher un message de confirmation
+        const tempMsg = document.createElement('div');
+        tempMsg.className = 'toast-message success';
+        tempMsg.innerHTML = '<i class="fas fa-check-circle"></i> Configuration caisse enregistrée';
+        tempMsg.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#48bb78;color:white;padding:12px 20px;border-radius:8px;z-index:9999;';
+        document.body.appendChild(tempMsg);
+        setTimeout(() => tempMsg.remove(), 3000);
+
+    } catch (error) {
+        console.error('Erreur sauvegarde config caisse:', error);
+        alert('Erreur lors de la sauvegarde de la configuration');
+    }
+}
+
 function updatePlanSelection(plan) {
     // Réinitialiser tous les cards
     document.querySelectorAll('.plan-card').forEach(card => {
@@ -536,7 +640,8 @@ function openEditModal(user) {
         { id: 'edit_perm_gestion', key: 'gestion', label: 'Gestion articles', icon: 'fa-box-open', desc: 'Modifier/supprimer articles' },
         { id: 'edit_perm_projets', key: 'projets', label: 'Gestion projets', icon: 'fa-project-diagram', desc: 'Créer/gérer les projets' },
         { id: 'edit_perm_reservations', key: 'reservations', label: 'Réservations', icon: 'fa-clipboard-list', desc: 'Gérer les réservations' },
-        { id: 'edit_perm_vuestock', key: 'vuestock', label: 'Vue Stock', icon: 'fa-eye', desc: 'Visualiser le stock complet' }
+        { id: 'edit_perm_vuestock', key: 'vuestock', label: 'Vue Stock', icon: 'fa-eye', desc: 'Visualiser le stock complet' },
+        { id: 'edit_perm_caisse', key: 'caisse', label: 'Caisse', icon: 'fa-cash-register', desc: 'Accéder à la caisse de magasin' }
     ];
 
     allPermissions.forEach(perm => {
@@ -635,7 +740,7 @@ document.getElementById('addUserForm')?.addEventListener('submit', async functio
         accueil: true
     };
 
-    const permissionKeys = ['config', 'creation', 'stats', 'historique', 'impression', 'gestion', 'projets', 'reservations', 'vuestock'];
+    const permissionKeys = ['config', 'creation', 'stats', 'historique', 'impression', 'gestion', 'projets', 'reservations', 'vuestock', 'caisse'];
 
     // Vérification : L'admin ne peut donner que ce qu'il a
     for (const key of permissionKeys) {
@@ -714,6 +819,29 @@ function setupEventListeners() {
     if (editUserForm) {
         editUserForm.addEventListener('submit', handleEditUser);
         document.getElementById('deleteUserBtn').addEventListener('click', handleDeleteUser);
+    }
+
+    // Configuration caisse
+    const caisseCheckbox = document.getElementById('caisseEnabled');
+    const taxCheckbox = document.getElementById('taxEnabled');
+    const taxRateInput = document.getElementById('taxRate');
+
+    if (caisseCheckbox) {
+        caisseCheckbox.addEventListener('change', async function() {
+            await saveCaisseConfig();
+        });
+    }
+
+    if (taxCheckbox) {
+        taxCheckbox.addEventListener('change', async function() {
+            await saveCaisseConfig();
+        });
+    }
+
+    if (taxRateInput) {
+        taxRateInput.addEventListener('change', async function() {
+            await saveCaisseConfig();
+        });
     }
 }
 
