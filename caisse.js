@@ -78,7 +78,12 @@ async function loadTaxConfig() {
 }
 
 async function checkCaisseAccess() {
-    alert('user: ' + JSON.stringify(currentUser));
+    const hasCaissePerm = currentUser?.permissions?.caisse === true;
+    const isModuleEnabled = currentUser?.permissions?.caisse_module_enabled === true;
+
+    if (!hasCaissePerm || !isModuleEnabled) {
+        window.location.href = 'accueil.html';
+    }
 }
 
 // ==================== ÉVÉNEMENTS ====================
