@@ -1075,7 +1075,6 @@ body {
     color: #4CAF50;
 }
 
-<<<<<<< HEAD
 /* Styles pour le sélecteur de facturation */
 .billing-toggle-container {
     display: flex;
@@ -1178,7 +1177,6 @@ body {
     margin-bottom: 5px;
 }
 
-=======
 /* ===== SECTION CAISSE CONFIG (À AJOUTER À LA FIN) ===== */
 .caisse-config-section {
     margin-bottom: 32px;
@@ -1392,5 +1390,4 @@ body {
         transform: translateX(0);
         opacity: 1;
     }
->>>>>>> sauvegarde-caisse
 }
