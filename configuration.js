@@ -956,6 +956,62 @@ function logout() {
     window.location.href = 'connexion.html';
 }
 
+// Script pour le toggle mensuel/annuel
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleCheckbox = document.getElementById('billingToggle');
+    const monthlyPrices = document.querySelectorAll('.monthly-price');
+    const yearlyPrices = document.querySelectorAll('.yearly-price');
+    const monthlyPeriods = document.querySelectorAll('.monthly-period');
+    const yearlyPeriods = document.querySelectorAll('.yearly-period');
+    const billingOptions = document.querySelectorAll('.billing-option');
+
+    function updatePrices(isYearly) {
+        // Afficher/masquer les prix mensuels et annuels
+        monthlyPrices.forEach(price => {
+            price.style.display = isYearly ? 'none' : 'inline';
+        });
+
+        yearlyPrices.forEach(price => {
+            price.style.display = isYearly ? 'inline' : 'none';
+        });
+
+        monthlyPeriods.forEach(period => {
+            period.style.display = isYearly ? 'none' : 'inline';
+        });
+
+        yearlyPeriods.forEach(period => {
+            period.style.display = isYearly ? 'inline' : 'none';
+        });
+
+        // Mettre à jour les classes actives des options
+        billingOptions.forEach(option => {
+            const isMonthlyOption = option.getAttribute('data-billing') === 'monthly';
+            if ((isYearly && !isMonthlyOption) || (!isYearly && isMonthlyOption)) {
+                option.classList.add('active');
+            } else {
+                option.classList.remove('active');
+            }
+        });
+    }
+
+    // Événement de changement du toggle
+    toggleCheckbox.addEventListener('change', function() {
+        updatePrices(this.checked);
+    });
+
+    // Événements de clic sur les options
+    billingOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            const isMonthly = this.getAttribute('data-billing') === 'monthly';
+            toggleCheckbox.checked = !isMonthly;
+            updatePrices(!isMonthly);
+        });
+    });
+
+    // Initialisation
+    updatePrices(false);
+});
+
 // Fermer le modal en cliquant à l'extérieur
 document.getElementById('editUserModal')?.addEventListener('click', function(e) {
     if (e.target === this) {

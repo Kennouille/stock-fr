@@ -1074,3 +1074,105 @@ body {
 .business-group .group-header i {
     color: #4CAF50;
 }
+
+/* Styles pour le sélecteur de facturation */
+.billing-toggle-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 40px;
+}
+
+.billing-toggle {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: #f5f5f7;
+    padding: 10px 20px;
+    border-radius: 50px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.billing-option {
+    font-size: 16px;
+    font-weight: 500;
+    color: #6c757d;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.billing-option.active {
+    color: #007bff;
+}
+
+.discount-badge {
+    background: #28a745;
+    color: white;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 20px;
+    margin-left: 5px;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 60px;
+    height: 30px;
+}
+
+.toggle-input {
+    display: none;
+}
+
+.toggle-label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #ccc;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.toggle-label::before {
+    content: '';
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    background-color: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.toggle-input:checked + .toggle-label {
+    background-color: #007bff;
+}
+
+.toggle-input:checked + .toggle-label::before {
+    transform: translateX(30px);
+}
+
+/* Styles pour les prix */
+.plan-price {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.price {
+    font-size: 28px;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.price-period {
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.plan-header h3 {
+    margin-bottom: 5px;
+}

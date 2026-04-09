@@ -145,11 +145,29 @@
                     <span class="badge subscription-badge">Nexen Stock</span>
                 </div>
 
+                <!-- Sélecteur mensuel/annuel -->
+                <div class="billing-toggle-container">
+                    <div class="billing-toggle">
+                        <span class="billing-option active" data-billing="monthly">Mensuel</span>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="billingToggle" class="toggle-input">
+                            <label for="billingToggle" class="toggle-label"></label>
+                        </div>
+                        <span class="billing-option" data-billing="yearly">Annuel <span class="discount-badge">-10%</span></span>
+                    </div>
+                </div>
+
                 <div class="plans-container">
                     <!-- Plan BASIC -->
                     <div class="plan-card" id="planBasic">
                         <div class="plan-header">
                             <h3>Nexen Stock BASIC</h3>
+                            <div class="plan-price">
+                                <span class="price monthly-price">49€</span>
+                                <span class="price yearly-price" style="display: none;">530€</span>
+                                <span class="price-period monthly-period">/mois</span>
+                                <span class="price-period yearly-period" style="display: none;">/an</span>
+                            </div>
                         </div>
                         <div class="plan-permissions">
                             <h4>Permissions :</h4>
@@ -194,6 +212,12 @@
                     <div class="plan-card" id="planPremium">
                         <div class="plan-header">
                             <h3>Nexen Stock PREMIUM</h3>
+                            <div class="plan-price">
+                                <span class="price monthly-price">79€</span>
+                                <span class="price yearly-price" style="display: none;">850€</span>
+                                <span class="price-period monthly-period">/mois</span>
+                                <span class="price-period yearly-period" style="display: none;">/an</span>
+                            </div>
                         </div>
                         <div class="plan-permissions">
                             <h4>Permissions :</h4>
@@ -238,6 +262,12 @@
                     <div class="plan-card" id="planBusiness">
                         <div class="plan-header">
                             <h3>Nexen Stock BUSINESS</h3>
+                            <div class="plan-price">
+                                <span class="price monthly-price">99€</span>
+                                <span class="price yearly-price" style="display: none;">1070€</span>
+                                <span class="price-period monthly-period">/mois</span>
+                                <span class="price-period yearly-period" style="display: none;">/an</span>
+                            </div>
                         </div>
                         <div class="plan-permissions">
                             <h4>Permissions :</h4>
