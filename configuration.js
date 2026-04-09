@@ -379,97 +379,62 @@ async function loadCurrentPlan() {
 
 // ===== CONFIGURATION CAISSE =====
 async function loadCaisseConfig() {
-    try {
-        // Vérifier si la table w_config existe, sinon la créer
-        const { data: config, error } = await supabase
-            .from('w_config')
-            .select('caisse_enabled, tax_enabled, tax_rate')
-            .single();
+    if (!currentUser) return;
 
-        if (error && error.code === 'PGRST116') {
-            // La table n'existe pas ou est vide, créer la configuration par défaut
-            const { error: insertError } = await supabase
-                .from('w_config')
-                .insert({
-                    id: 1,
-                    caisse_enabled: false,
-                    tax_enabled: false,
-                    tax_rate: 20,
-                    updated_at: new Date().toISOString()
-                });
+    const permissions = currentUser.permissions || {};
 
-            if (!insertError) {
-                caisseEnabled = false;
-                taxEnabled = false;
-                taxRate = 20;
-                updateCaisseUI();
-            }
-        } else if (!error && config) {
-            caisseEnabled = config.caisse_enabled || false;
-            taxEnabled = config.tax_enabled || false;
-            taxRate = config.tax_rate || 20;
-            updateCaisseUI();
-        }
-    } catch (error) {
-        console.error('Erreur chargement config caisse:', error);
-    }
-}
-
-function updateCaisseUI() {
     const caisseCheckbox = document.getElementById('caisseEnabled');
     const taxCheckbox = document.getElementById('taxEnabled');
     const taxRateInput = document.getElementById('taxRate');
     const taxConfigGroup = document.getElementById('taxConfigGroup');
     const taxRateGroup = document.getElementById('taxRateGroup');
 
-    if (caisseCheckbox) caisseCheckbox.checked = caisseEnabled;
-    if (taxCheckbox) taxCheckbox.checked = taxEnabled;
-    if (taxRateInput) taxRateInput.value = taxRate;
+    if (caisseCheckbox) caisseCheckbox.checked = permissions.caisse_module_enabled === true;
+    if (taxCheckbox) taxCheckbox.checked = permissions.caisse_tax_enabled === true;
+    if (taxRateInput) taxRateInput.value = permissions.caisse_tax_rate || 20;
 
     if (taxConfigGroup) {
-        taxConfigGroup.style.display = caisseEnabled ? 'block' : 'none';
+        taxConfigGroup.style.display = permissions.caisse_module_enabled ? 'block' : 'none';
     }
-
     if (taxRateGroup) {
-        taxRateGroup.style.display = taxEnabled && caisseEnabled ? 'flex' : 'none';
+        taxRateGroup.style.display = (permissions.caisse_tax_enabled && permissions.caisse_module_enabled) ? 'flex' : 'none';
     }
 }
 
 async function saveCaisseConfig() {
-    const newCaisseEnabled = document.getElementById('caisseEnabled')?.checked || false;
-    const newTaxEnabled = document.getElementById('taxEnabled')?.checked || false;
-    const newTaxRate = parseFloat(document.getElementById('taxRate')?.value) || 20;
+    if (!currentUser) return;
+
+    const caisseEnabled = document.getElementById('caisseEnabled')?.checked || false;
+    const taxEnabled = document.getElementById('taxEnabled')?.checked || false;
+    const taxRate = parseFloat(document.getElementById('taxRate')?.value) || 20;
+
+    const updatedPermissions = {
+        ...currentUser.permissions,
+        caisse_module_enabled: caisseEnabled,
+        caisse_tax_enabled: taxEnabled,
+        caisse_tax_rate: taxRate
+    };
 
     try {
         const { error } = await supabase
-            .from('w_config')
-            .upsert({
-                id: 1,
-                caisse_enabled: newCaisseEnabled,
-                tax_enabled: newTaxEnabled,
-                tax_rate: newTaxRate,
-                updated_at: new Date().toISOString()
-            });
+            .from('w_users')
+            .update({ permissions: updatedPermissions })
+            .eq('id', currentUser.id);
 
         if (error) throw error;
 
-        caisseEnabled = newCaisseEnabled;
-        taxEnabled = newTaxEnabled;
-        taxRate = newTaxRate;
+        currentUser.permissions = updatedPermissions;
+        sessionStorage.setItem('current_user', JSON.stringify(currentUser));
 
-        updateCaisseUI();
+        const taxConfigGroup = document.getElementById('taxConfigGroup');
+        const taxRateGroup = document.getElementById('taxRateGroup');
 
-        // Afficher un message de confirmation
-        const tempMsg = document.createElement('div');
-        tempMsg.className = 'toast-message success';
-        tempMsg.innerHTML = '<i class="fas fa-check-circle"></i> Configuration caisse enregistrée';
-        tempMsg.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#48bb78;color:white;padding:12px 20px;border-radius:8px;z-index:9999;';
-        document.body.appendChild(tempMsg);
-        setTimeout(() => tempMsg.remove(), 3000);
+        if (taxConfigGroup) taxConfigGroup.style.display = caisseEnabled ? 'block' : 'none';
+        if (taxRateGroup) taxRateGroup.style.display = (taxEnabled && caisseEnabled) ? 'flex' : 'none';
 
     } catch (error) {
-        console.error('Erreur sauvegarde config caisse:', error);
-        alert('Erreur lors de la sauvegarde de la configuration');
+        console.error('Erreur:', error);
+        alert('Erreur lors de la sauvegarde');
     }
 }
 
@@ -821,28 +786,14 @@ function setupEventListeners() {
         document.getElementById('deleteUserBtn').addEventListener('click', handleDeleteUser);
     }
 
-    // Configuration caisse
+    // Événements configuration caisse
     const caisseCheckbox = document.getElementById('caisseEnabled');
     const taxCheckbox = document.getElementById('taxEnabled');
     const taxRateInput = document.getElementById('taxRate');
 
-    if (caisseCheckbox) {
-        caisseCheckbox.addEventListener('change', async function() {
-            await saveCaisseConfig();
-        });
-    }
-
-    if (taxCheckbox) {
-        taxCheckbox.addEventListener('change', async function() {
-            await saveCaisseConfig();
-        });
-    }
-
-    if (taxRateInput) {
-        taxRateInput.addEventListener('change', async function() {
-            await saveCaisseConfig();
-        });
-    }
+    if (caisseCheckbox) caisseCheckbox.addEventListener('change', saveCaisseConfig);
+    if (taxCheckbox) taxCheckbox.addEventListener('change', saveCaisseConfig);
+    if (taxRateInput) taxRateInput.addEventListener('change', saveCaisseConfig);
 }
 
 async function handleEditUser(e) {
