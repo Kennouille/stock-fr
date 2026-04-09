@@ -61,7 +61,7 @@ async function init() {
 async function loadCurrentUser() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-        window.location.href = 'index.html';
+        window.location.href = 'accueil.html';
         return;
     }
 
@@ -483,7 +483,7 @@ function escapeHtml(str) {
 
 async function handleLogout() {
     await supabase.auth.signOut();
-    window.location.href = 'index.html';
+    window.location.href = 'accueil.html';
 }
 
 // Lancer l'application
