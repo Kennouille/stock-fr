@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caisse - NeXeN Store Manager</title>
+    <link rel="stylesheet" href="caisse.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div class="caisse-container">
+        <!-- Header -->
+        <header class="caisse-header">
+            <div class="header-left">
+                <a href="accueil.html" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </a>
+                <h1><i class="fas fa-cash-register"></i> Caisse de magasin</h1>
+            </div>
+            <div class="header-right">
+                <span class="user-info">
+                    <i class="fas fa-user"></i>
+                    <span id="usernameDisplay">...</span>
+                </span>
+                <button id="logoutBtn" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> Déconnexion
+                </button>
+            </div>
+        </header>
+
+        <div class="caisse-main">
+            <!-- Colonne gauche : Recherche et scan -->
+            <div class="caisse-left">
+                <!-- Section Scan / Recherche -->
+                <div class="search-scan-section">
+                    <div class="section-title">
+                        <i class="fas fa-barcode"></i>
+                        <h3>Scanner / Rechercher</h3>
+                    </div>
+
+                    <!-- Scan code-barres -->
+                    <div class="scan-box">
+                        <div class="scan-icon">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                        <div class="scan-content">
+                            <label>Code-barres</label>
+                            <div class="scan-input-group">
+                                <input type="text"
+                                       id="scanInput"
+                                       placeholder="Scanner ou saisir le code-barres"
+                                       autofocus>
+                                <button id="scanBtn" class="btn-scan">
+                                    <i class="fas fa-camera"></i>
+                                </button>
+                            </div>
+                            <small>Appuyez sur Entrée après scan</small>
+                        </div>
+                    </div>
+
+                    <!-- Recherche par nom -->
+                    <div class="search-box">
+                        <div class="search-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="search-content">
+                            <label>Recherche par nom</label>
+                            <div class="search-input-group">
+                                <input type="text"
+                                       id="searchNameInput"
+                                       placeholder="Nom de l'article..."
+                                       autocomplete="off">
+                                <button id="searchNameBtn" class="btn-search">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Résultats de recherche -->
+                    <div id="searchResults" class="search-results" style="display: none;">
+                        <div class="results-header">
+                            <span><i class="fas fa-list"></i> Résultats</span>
+                            <button id="closeResultsBtn" class="close-results">&times;</button>
+                        </div>
+                        <div id="resultsList" class="results-list"></div>
+                    </div>
+                </div>
+
+                <!-- Consultation prix rapide -->
+                <div class="price-check-section">
+                    <div class="section-title">
+                        <i class="fas fa-tag"></i>
+                        <h3>Consultation prix</h3>
+                    </div>
+                    <div class="price-check-box">
+                        <input type="text"
+                               id="priceCheckInput"
+                               placeholder="Scanner un article pour voir son prix">
+                        <button id="priceCheckBtn" class="btn-price-check">
+                            <i class="fas fa-eye"></i> Voir prix
+                        </button>
+                    </div>
+                    <div id="priceDisplay" class="price-display" style="display: none;">
+                        <div class="price-card">
+                            <div class="price-article-name"></div>
+                            <div class="price-value"></div>
+                            <div class="price-tax"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Colonne droite : Panier et caisse -->
+            <div class="caisse-right">
+                <!-- Panier -->
+                <div class="cart-section">
+                    <div class="section-title">
+                        <i class="fas fa-shopping-cart"></i>
+                        <h3>Panier en cours</h3>
+                        <button id="clearCartBtn" class="btn-clear-cart">
+                            <i class="fas fa-trash-alt"></i> Vider
+                        </button>
+                    </div>
+
+                    <div class="cart-table-container">
+                        <table class="cart-table">
+                            <thead>
+                                <tr>
+                                    <th>Article</th>
+                                    <th>Prix HT</th>
+                                    <th>Qté</th>
+                                    <th>TVA</th>
+                                    <th>Total TTC</th>
+                                    <th></th>
+                                 '</tr>
+                            </thead>
+                            <tbody id="cartBody">
+                                <tr class="empty-cart-row">
+                                    <td colspan="6">Aucun article dans le panier</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Totaux et paiement -->
+                <div class="payment-section">
+                    <div class="totals">
+                        <div class="total-line">
+                            <span>Total HT :</span>
+                            <span id="totalHT">0.00 €</span>
+                        </div>
+                        <div class="total-line tax-line" id="taxLine" style="display: none;">
+                            <span>TVA (<span id="taxRate">20</span>%) :</span>
+                            <span id="totalTVA">0.00 €</span>
+                        </div>
+                        <div class="total-line grand-total">
+                            <span>Total TTC :</span>
+                            <span id="totalTTC">0.00 €</span>
+                        </div>
+                    </div>
+
+                    <div class="payment-input">
+                        <label>Montant donné par le client</label>
+                        <div class="money-input-group">
+                            <input type="number"
+                                   id="amountGiven"
+                                   placeholder="0.00"
+                                   step="0.01">
+                            <button id="calculateChangeBtn" class="btn-calculate">
+                                Calculer
+                            </button>
+                        </div>
+
+                        <!-- Boutons billets et monnaie -->
+                        <div class="money-buttons">
+                            <div class="money-group">
+                                <span class="money-label">Billets</span>
+                                <div class="money-btns">
+                                    <button class="money-btn" data-value="5">5€</button>
+                                    <button class="money-btn" data-value="10">10€</button>
+                                    <button class="money-btn" data-value="20">20€</button>
+                                    <button class="money-btn" data-value="50">50€</button>
+                                    <button class="money-btn" data-value="100">100€</button>
+                                </div>
+                            </div>
+                            <div class="money-group">
+                                <span class="money-label">Pièces</span>
+                                <div class="money-btns">
+                                    <button class="money-btn" data-value="0.10">0.10€</button>
+                                    <button class="money-btn" data-value="0.20">0.20€</button>
+                                    <button class="money-btn" data-value="0.50">0.50€</button>
+                                    <button class="money-btn" data-value="1">1€</button>
+                                    <button class="money-btn" data-value="2">2€</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="changeDisplay" class="change-display" style="display: none;">
+                            <div class="change-card">
+                                <div class="change-label">Monnaie à rendre</div>
+                                <div class="change-amount" id="changeAmount">0.00 €</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button id="validateSaleBtn" class="btn-validate" disabled>
+                            <i class="fas fa-check-circle"></i> Valider la vente
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal d'ajout de quantité -->
+    <div id="quantityModal" class="modal-overlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-sort-amount-up"></i> Quantité</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="quantityArticleName"></p>
+                <div class="quantity-input-group">
+                    <button class="quantity-btn minus-qty">-</button>
+                    <input type="number" id="modalQuantity" value="1" min="1">
+                    <button class="quantity-btn plus-qty">+</button>
+                </div>
+                <div class="stock-info">
+                    Stock disponible : <span id="availableStock">0</span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="confirmQuantityBtn" class="btn-primary">Ajouter</button>
+                <button class="btn-secondary close-modal">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="caisse.js"></script>
+</body>
+</html>
