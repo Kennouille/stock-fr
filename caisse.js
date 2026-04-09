@@ -1,8 +1,4 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/+esm';
-
-const supabaseUrl = 'https://lanxxvocjwpyegoxxxkj.supabase.co';
-const supabaseKey = 'VOTRE_CLE_SUPABASE'; // À remplacer par votre clé
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from './supabaseClient.js';
 
 // État global
 let currentUser = null;
