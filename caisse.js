@@ -96,24 +96,18 @@ async function loadTaxConfig() {
 }
 
 async function checkCaisseAccess() {
-    if (!currentUser) {
-        console.log('Pas de currentUser');
-        return;
-    }
+    if (!currentUser) return;
 
     const hasCaissePerm = currentUser.permissions?.caisse === true;
     const isModuleEnabled = currentUser.permissions?.caisse_module_enabled === true;
 
-    console.log('========== DEBUG CAISSE ==========');
     console.log('hasCaissePerm:', hasCaissePerm);
     console.log('isModuleEnabled:', isModuleEnabled);
-    console.log('currentUser.permissions:', currentUser.permissions);
-    console.log('==================================');
 
-    // NE RIEN FAIRE POUR LE MOMENT - juste logs
-    // if (!isModuleEnabled || !hasCaissePerm) {
-    //     window.location.href = 'accueil.html';
-    // }
+    if (!isModuleEnabled || !hasCaissePerm) {
+        alert(JSON.stringify(currentUser.permissions));  // ← au lieu de la redirection
+        // window.location.href = 'accueil.html';
+    }
 }
 
 // ==================== ÉVÉNEMENTS ====================
@@ -487,7 +481,7 @@ function escapeHtml(str) {
 
 async function handleLogout() {
     await supabase.auth.signOut();
-    // window.location.href = 'accueil.html';
+    window.location.href = 'accueil.html';
 }
 
 // Lancer l'application
