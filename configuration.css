@@ -1248,26 +1248,25 @@ body {
 
 .toggle-switch label {
     display: flex;
-    flex-direction: row;
-    align-items: baseline;
-    flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
-.toggle-switch label span {
-    display: inline-block;
+.toggle-switch label strong {
+    font-weight: 600;
+    color: #2d3748;
 }
 
-.toggle-switch label small {
-    display: inline-block;
+.toggle-switch label .toggle-description {
     font-weight: normal;
     color: #718096;
+    font-size: 0.85rem;
 }
 
 .toggle-switch label i {
     font-size: 1.2rem;
     color: #667eea;
-    margin-right: 10px;
 }
 
 .tax-rate-group {
