@@ -99,17 +99,15 @@ async function checkCaisseAccess() {
     if (!currentUser) return;
 
     const hasCaissePerm = currentUser.permissions?.caisse === true;
+    const isModuleEnabled = currentUser.permissions?.caisse_module_enabled === true;
 
-    const { data: config } = await supabase
-        .from('w_config')
-        .select('caisse_enabled')
-        .single();
+    console.log('hasCaissePerm:', hasCaissePerm);
+    console.log('isModuleEnabled:', isModuleEnabled);
 
-    const isCaisseEnabled = config?.caisse_enabled === true;
-
-    if (!isCaisseEnabled || !hasCaissePerm) {
-        window.location.href = 'accueil.html';
-    }
+    // TEMPORAIRE : Commenté pour voir les logs
+    // if (!isModuleEnabled || !hasCaissePerm) {
+    //     window.location.href = 'accueil.html';
+    // }
 }
 
 // ==================== ÉVÉNEMENTS ====================
