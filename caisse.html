@@ -21,22 +21,20 @@
             <div class="user-chip"><i class="fas fa-user"></i><span id="usernameDisplay">…</span></div>
         </div>
 
-        <!-- Bloc 1 : Scanner un code-barres (cliquable) -->
+        <!-- Bloc 1 : Scanner un code-barres -->
         <div class="card action-card scan-block" id="scanCard">
             <div class="card-label"><i class="fas fa-barcode"></i> Scanner un code-barres</div>
-            <div class="action-desc">Cliquez pour scanner ou saisir</div>
-            <div class="input-row" style="display:none;">
-                <input type="text" id="scanInput" placeholder="Code-barres…">
+            <div class="input-row">
+                <input type="text" id="scanInput" placeholder="Code-barres…" autofocus>
                 <button id="scanBtn" class="btn-icon-accent"><i class="fas fa-bolt"></i></button>
             </div>
-            <span class="hint" style="display:none;">Appuyez sur Entrée après le scan</span>
+            <span class="hint">Appuyez sur Entrée après le scan</span>
         </div>
 
-        <!-- Bloc 2 : Rechercher un article (cliquable) -->
+        <!-- Bloc 2 : Rechercher un article -->
         <div class="card action-card search-block" id="searchCard">
             <div class="card-label"><i class="fas fa-search"></i> Rechercher un article</div>
-            <div class="action-desc">Cliquez pour rechercher</div>
-            <div class="input-row" style="display:none;">
+            <div class="input-row">
                 <input type="text" id="searchNameInput" placeholder="Nom de l'article…" autocomplete="off">
                 <button id="searchNameBtn" class="btn-icon-accent"><i class="fas fa-search"></i></button>
             </div>
@@ -49,11 +47,10 @@
             </div>
         </div>
 
-        <!-- Bloc 3 : Consultation prix (cliquable) -->
+        <!-- Bloc 3 : Consultation prix -->
         <div class="card action-card price-block" id="priceCard">
             <div class="card-label"><i class="fas fa-tag"></i> Consultation prix</div>
-            <div class="action-desc">Cliquez pour vérifier un prix</div>
-            <div class="input-row" style="display:none;">
+            <div class="input-row">
                 <input type="text" id="priceCheckInput" placeholder="Scanner un article…">
                 <button id="priceCheckBtn" class="btn-icon-warn"><i class="fas fa-eye"></i></button>
             </div>
@@ -64,7 +61,7 @@
             </div>
         </div>
 
-        <!-- Bloc 4 : Dernières transactions (NOUVEAU) -->
+        <!-- Bloc 4 : Dernières transactions -->
         <div class="card action-card transactions-block" id="transactionsCard">
             <div class="card-label"><i class="fas fa-history"></i> Dernières transactions</div>
             <div class="action-desc">Consulter et réimprimer les tickets</div>

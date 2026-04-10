@@ -114,66 +114,79 @@ function setupBeforeUnload() {
 
 // ─── ÉVÉNEMENTS ───
 function setupEventListeners() {
-    // Scanner code barre - amélioré
-    const scanBlock = document.querySelector('.scan-block'); // Ajoutez cette classe à votre bloc scanner
-    if (scanBlock) {
-        scanBlock.addEventListener('click', (e) => {
-            // Si c'est un périphérique mobile ou si on veut forcer le clavier virtuel
+    // ⚠️ NE PAS CACHER les événements existants, seulement AJOUTER ces nouveaux
+
+    // Scanner - clic sur la carte pour focus
+    const scanCard = document.querySelector('.scan-block');
+    if (scanCard) {
+        scanCard.addEventListener('click', (e) => {
+            // Éviter que le clic sur l'input ou le bouton ne déclenche deux fois
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+
             if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || e.ctrlKey) {
                 currentInputTarget = 'scan';
                 createVirtualKeyboard('numeric');
             } else {
-                scanInput.focus();
+                document.getElementById('scanInput').focus();
             }
         });
     }
 
-    // Rechercher article - amélioré
-    const searchBlock = document.querySelector('.search-block'); // Ajoutez cette classe à votre bloc recherche
-    if (searchBlock) {
-        searchBlock.addEventListener('click', (e) => {
+    // Recherche - clic sur la carte pour focus
+    const searchCard = document.querySelector('.search-block');
+    if (searchCard) {
+        searchCard.addEventListener('click', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+
             if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || e.ctrlKey) {
                 currentInputTarget = 'search';
                 createVirtualKeyboard('alphabet');
             } else {
-                searchNameInput.focus();
+                document.getElementById('searchNameInput').focus();
             }
         });
     }
 
-    // Consultation prix - amélioré
-    const priceBlock = document.querySelector('.price-block'); // Ajoutez cette classe à votre bloc prix
-    if (priceBlock) {
-        priceBlock.addEventListener('click', (e) => {
+    // Prix - clic sur la carte pour focus
+    const priceCard = document.querySelector('.price-block');
+    if (priceCard) {
+        priceCard.addEventListener('click', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+
             if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || e.ctrlKey) {
                 currentInputTarget = 'price';
                 createVirtualKeyboard('numeric');
             } else {
-                priceCheckInput.focus();
+                document.getElementById('priceCheckInput').focus();
             }
         });
     }
 
     // Dernières transactions
-    const transactionsBlock = document.querySelector('.transactions-block'); // Ajoutez cette classe
+    const transactionsBlock = document.querySelector('.transactions-block');
     if (transactionsBlock) {
         transactionsBlock.addEventListener('click', loadLastTransactions);
     }
 
-    // Gardez les événements existants
+    // === GARDER TOUS VOS ÉVÉNEMENTS EXISTANTS ===
     scanInput.addEventListener('keypress', e => { if (e.key === 'Enter') handleScan(scanInput.value); });
     scanBtn.addEventListener('click', () => handleScan(scanInput.value));
+
     searchNameBtn.addEventListener('click', handleSearchByName);
     searchNameInput.addEventListener('keypress', e => { if (e.key === 'Enter') handleSearchByName(); });
     closeResultsBtn.addEventListener('click', () => { searchResults.style.display = 'none'; searchNameInput.value = ''; });
+
     priceCheckBtn.addEventListener('click', handlePriceCheck);
     priceCheckInput.addEventListener('keypress', e => { if (e.key === 'Enter') handlePriceCheck(); });
+
     clearCartBtn.addEventListener('click', clearCart);
     validateSaleBtn.addEventListener('click', validateSaleCash);
     logoutBtn.addEventListener('click', handleLogout);
     resetAmountBtn.addEventListener('click', resetAmount);
+
     closeSaleBtn.addEventListener('click', () => { saleModal.style.display = 'none'; });
     printTicketBtn.addEventListener('click', printTicket);
+
     btnPayCard?.addEventListener('click', openStripeModal);
     btnPayQr?.addEventListener('click', openQrModal);
     closeStripeModal?.addEventListener('click', () => { stripeModal.style.display = 'none'; });
@@ -196,11 +209,11 @@ function setupEventListeners() {
 
     // Modal quantité
     confirmQuantityBtn.addEventListener('click', addToCartWithQuantity);
-    document.querySelector('.minus-qty').addEventListener('click', () => {
+    document.querySelector('.minus-qty')?.addEventListener('click', () => {
         const v = parseInt(modalQuantity.value) || 1;
         if (v > 1) modalQuantity.value = v - 1;
     });
-    document.querySelector('.plus-qty').addEventListener('click', () => {
+    document.querySelector('.plus-qty')?.addEventListener('click', () => {
         modalQuantity.value = (parseInt(modalQuantity.value) || 1) + 1;
     });
     document.querySelectorAll('.close-modal').forEach(btn => {

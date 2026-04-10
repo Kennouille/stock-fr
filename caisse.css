@@ -758,7 +758,7 @@ body {
     border-top: 2px solid var(--accent);
 }
 
-/* Cards cliquables */
+/* Cards cliquables - seulement pour l'effet visuel */
 .action-card {
     cursor: pointer;
     transition: all 0.2s ease;
@@ -777,10 +777,5 @@ body {
     font-size: 11px;
     color: var(--text3);
     margin-top: 4px;
-}
-
-/* Cache les anciens inputs dans les cards */
-.action-card .input-row,
-.action-card .hint {
-    display: none;
+    margin-bottom: 8px;
 }
