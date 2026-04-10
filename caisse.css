@@ -372,12 +372,12 @@ body {
     transition: transform .15s, box-shadow .15s;
     border-radius: 5px;
 }
-.money-img:hover { transform: translateY(-3px) scale(2); box-shadow: var(--shadow); }
+.money-img:hover { transform: translateY(-3px) scale(1.5); box-shadow: var(--shadow); }
 .money-img:active { transform: scale(0.97); }
 
 .bill-img {
-    width: 52px;
-    height: 90px;
+    width: 70px;
+    height: 120px;
     object-fit: cover;
     box-shadow: var(--shadow-sm);
     border-radius: 5px;
