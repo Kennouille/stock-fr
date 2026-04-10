@@ -411,24 +411,46 @@ async function handleStripePayment() {
     stripeError.style.display = 'none';
 
     try {
+        // Appel à votre edge function
         const res = await fetch(SUPABASE_FUNCTION_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount: total, currency: 'eur', type: 'card' })
-        });
-        const json = await res.json();
-        if (json.error) throw new Error(json.error);
-
-        const { paymentIntent, error } = await stripeInstance.confirmCardPayment(json.client_secret, {
-            payment_method: { card: stripeCardElement }
+            body: JSON.stringify({
+                amount: total,
+                currency: 'eur',
+                type: 'card'  // Important: type 'card'
+            })
         });
 
-        if (error) throw new Error(error.message);
+        const data = await res.json();
+        console.log('Réponse edge function:', data);
+
+        if (data.error) throw new Error(data.error);
+
+        // Vérifier que clientSecret existe
+        if (!data.clientSecret) {
+            throw new Error('Pas de clientSecret reçu');
+        }
+
+        // Confirmer le paiement avec le client_secret
+        const { paymentIntent, error } = await stripeInstance.confirmCardPayment(data.clientSecret, {
+            payment_method: {
+                card: stripeCardElement
+            }
+        });
+
+        if (error) {
+            console.error('Erreur confirmation:', error);
+            throw new Error(error.message);
+        }
+
         if (paymentIntent.status === 'succeeded') {
             stripeModal.style.display = 'none';
             await enregistrerVente(total, total, 'carte');
         }
+
     } catch (err) {
+        console.error('Erreur paiement carte:', err);
         stripeError.textContent = err.message;
         stripeError.style.display = 'block';
     } finally {
@@ -437,75 +459,88 @@ async function handleStripePayment() {
     }
 }
 
-// caisse.js - fonction openQrModal modifiée
 async function openQrModal() {
     if (cart.length === 0) return;
     const total = getCartTotal();
     qrAmount.textContent = formatEur(total);
-    qrContainer.innerHTML = '<div class="qr-loading"><i class="fas fa-spinner fa-spin"></i> Génération du lien de paiement…</div>';
+    qrContainer.innerHTML = '<div class="qr-loading"><i class="fas fa-spinner fa-spin"></i> Génération du QR code…</div>';
     qrModal.style.display = 'flex';
 
     try {
+        // Appel à votre edge function avec type 'qr'
         const res = await fetch(SUPABASE_FUNCTION_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount: total, currency: 'eur', type: 'qr' })
-        });
-        const json = await res.json();
-        if (json.error) throw new Error(json.error);
-
-        // Créer une URL de paiement Stripe Checkout
-        // Note : Pour un vrai QR code, vous devriez utiliser Checkout Sessions
-        // mais cela nécessite une URL de retour
-
-        // Solution alternative : Utiliser Stripe Checkout Session
-        const checkoutRes = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${STRIPE_SECRET_KEY}`,
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                'payment_method_types[]': 'card',
-                'line_items[0][price_data][currency]': 'eur',
-                'line_items[0][price_data][product_data][name]': 'Paiement en magasin',
-                'line_items[0][price_data][unit_amount]': Math.round(total * 100),
-                'line_items[0][quantity]': '1',
-                'mode': 'payment',
-                'success_url': window.location.origin + '/caisse.html?payment_success=1',
-                'cancel_url': window.location.origin + '/caisse.html?payment_cancel=1',
+            body: JSON.stringify({
+                amount: total,
+                currency: 'eur',
+                type: 'qr'  // Important: type 'qr'
             })
         });
 
-        const checkoutData = await checkoutRes.json();
+        const data = await res.json();
+        console.log('Réponse QR:', data);
 
-        if (checkoutData.url) {
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(checkoutData.url)}`;
-            qrContainer.innerHTML = `
-                <img src="${qrUrl}" alt="QR Code" style="width:220px;height:220px;border-radius:8px;">
-                <p style="font-size:0.78rem;color:var(--text3);margin-top:8px;text-align:center;">Le client scanne ce code avec son téléphone</p>
-                <div style="margin-top:12px;display:flex;gap:8px;">
+        if (data.error) throw new Error(data.error);
+
+        // Vérifier que l'URL existe
+        if (!data.url) {
+            throw new Error('Pas d\'URL de paiement reçue');
+        }
+
+        // Générer le QR code avec l'URL Stripe Checkout
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.url)}`;
+
+        qrContainer.innerHTML = `
+            <div style="text-align:center;">
+                <div style="background: white; padding: 15px; border-radius: 12px; display: inline-block;">
+                    <img src="${qrCodeUrl}" alt="QR Code" style="width:200px;height:200px;">
+                </div>
+                <p style="font-size:0.85rem;color:var(--text3);margin:15px 0 10px 0;">
+                    <i class="fas fa-mobile-alt"></i> Le client scanne ce code avec son téléphone
+                </p>
+                <p style="font-size:0.75rem;color:var(--text3);margin-bottom:15px;">
+                    Le client paiera sur son téléphone
+                </p>
+                <div style="display:flex;gap:10px;">
                     <button id="qrRefreshBtn" class="btn-secondary" style="flex:1;">
-                        <i class="fas fa-sync"></i> Rafraîchir
+                        <i class="fas fa-sync"></i> Nouveau QR
                     </button>
                     <button id="qrPaidBtn" class="btn-primary" style="flex:1;">
-                        <i class="fas fa-check"></i> Paiement validé
+                        <i class="fas fa-check"></i> J'ai reçu le paiement
                     </button>
-                </div>`;
+                </div>
+            </div>`;
 
-            document.getElementById('qrPaidBtn').addEventListener('click', async () => {
-                qrModal.style.display = 'none';
-                await enregistrerVente(total, total, 'QR code');
-            });
-
-            document.getElementById('qrRefreshBtn').addEventListener('click', () => {
-                openQrModal(); // Re-générer le QR
-            });
-        } else {
-            throw new Error('Impossible de créer la session de paiement');
+        // Rafraîchir le QR
+        const refreshBtn = document.getElementById('qrRefreshBtn');
+        if (refreshBtn) {
+            refreshBtn.onclick = () => openQrModal();
         }
+
+        // Confirmer le paiement (manuellement car Stripe redirige vers success_url)
+        const paidBtn = document.getElementById('qrPaidBtn');
+        if (paidBtn) {
+            paidBtn.onclick = async () => {
+                // Ici, idéalement il faudrait vérifier que le paiement a bien été fait
+                // Mais pour simplifier, on valide manuellement
+                if (confirm('Confirmez-vous que le client a bien payé ?')) {
+                    qrModal.style.display = 'none';
+                    await enregistrerVente(total, total, 'QR code');
+                }
+            };
+        }
+
     } catch (err) {
-        qrContainer.innerHTML = `<div style="color:var(--danger);font-size:0.85rem;">Erreur: ${err.message}<br><button onclick="openQrModal()" class="btn-secondary" style="margin-top:8px;">Réessayer</button></div>`;
+        console.error('Erreur QR:', err);
+        qrContainer.innerHTML = `
+            <div style="text-align:center;color:var(--danger);">
+                <i class="fas fa-exclamation-triangle" style="font-size:2rem;"></i>
+                <p style="margin:10px 0;">${err.message}</p>
+                <button onclick="openQrModal()" class="btn-secondary">
+                    <i class="fas fa-redo"></i> Réessayer
+                </button>
+            </div>`;
     }
 }
 
