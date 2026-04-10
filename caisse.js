@@ -11,6 +11,9 @@ let lastSaleData = null;
 let stripeInstance = null;
 let stripeElements = null;
 let stripeCardElement = null;
+let virtualKeyboard = null;
+let currentInputTarget = null; // 'scan', 'search', 'price'
+let lastTransactions = [];
 
 const STRIPE_PUBLIC_KEY = 'pk_test_51T9DBURq7ukXBvuPlqzY6YGQjobMWNxfdUx88YlpNT3iFgsppTne56qWj8UPIbLcUgsvBcH1NxNXrq2FHvlCjGjJ00EetKx4ko';
 const SUPABASE_FUNCTION_URL = 'https://lanxxvocjwpyegoxxxkj.supabase.co/functions/v1/create-payment-intent';
@@ -111,25 +114,66 @@ function setupBeforeUnload() {
 
 // ─── ÉVÉNEMENTS ───
 function setupEventListeners() {
+    // Scanner code barre - amélioré
+    const scanBlock = document.querySelector('.scan-block'); // Ajoutez cette classe à votre bloc scanner
+    if (scanBlock) {
+        scanBlock.addEventListener('click', (e) => {
+            // Si c'est un périphérique mobile ou si on veut forcer le clavier virtuel
+            if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || e.ctrlKey) {
+                currentInputTarget = 'scan';
+                createVirtualKeyboard('numeric');
+            } else {
+                scanInput.focus();
+            }
+        });
+    }
+
+    // Rechercher article - amélioré
+    const searchBlock = document.querySelector('.search-block'); // Ajoutez cette classe à votre bloc recherche
+    if (searchBlock) {
+        searchBlock.addEventListener('click', (e) => {
+            if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || e.ctrlKey) {
+                currentInputTarget = 'search';
+                createVirtualKeyboard('alphabet');
+            } else {
+                searchNameInput.focus();
+            }
+        });
+    }
+
+    // Consultation prix - amélioré
+    const priceBlock = document.querySelector('.price-block'); // Ajoutez cette classe à votre bloc prix
+    if (priceBlock) {
+        priceBlock.addEventListener('click', (e) => {
+            if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || e.ctrlKey) {
+                currentInputTarget = 'price';
+                createVirtualKeyboard('numeric');
+            } else {
+                priceCheckInput.focus();
+            }
+        });
+    }
+
+    // Dernières transactions
+    const transactionsBlock = document.querySelector('.transactions-block'); // Ajoutez cette classe
+    if (transactionsBlock) {
+        transactionsBlock.addEventListener('click', loadLastTransactions);
+    }
+
+    // Gardez les événements existants
     scanInput.addEventListener('keypress', e => { if (e.key === 'Enter') handleScan(scanInput.value); });
     scanBtn.addEventListener('click', () => handleScan(scanInput.value));
-
     searchNameBtn.addEventListener('click', handleSearchByName);
     searchNameInput.addEventListener('keypress', e => { if (e.key === 'Enter') handleSearchByName(); });
     closeResultsBtn.addEventListener('click', () => { searchResults.style.display = 'none'; searchNameInput.value = ''; });
-
     priceCheckBtn.addEventListener('click', handlePriceCheck);
     priceCheckInput.addEventListener('keypress', e => { if (e.key === 'Enter') handlePriceCheck(); });
-
     clearCartBtn.addEventListener('click', clearCart);
     validateSaleBtn.addEventListener('click', validateSaleCash);
     logoutBtn.addEventListener('click', handleLogout);
     resetAmountBtn.addEventListener('click', resetAmount);
-
     closeSaleBtn.addEventListener('click', () => { saleModal.style.display = 'none'; });
     printTicketBtn.addEventListener('click', printTicket);
-
-    // Stripe
     btnPayCard?.addEventListener('click', openStripeModal);
     btnPayQr?.addEventListener('click', openQrModal);
     closeStripeModal?.addEventListener('click', () => { stripeModal.style.display = 'none'; });
@@ -698,6 +742,280 @@ async function handleLogout() {
     await supabase.auth.signOut();
     sessionStorage.removeItem('current_user');
     window.location.href = 'accueil.html';
+}
+
+// ─── CLAVIER VIRTUEL ───
+function createVirtualKeyboard(type) {
+    // Supprimer l'ancien clavier s'il existe
+    if (virtualKeyboard) virtualKeyboard.remove();
+
+    const keyboard = document.createElement('div');
+    keyboard.className = 'virtual-keyboard';
+
+    if (type === 'numeric') {
+        keyboard.innerHTML = `
+            <div class="keyboard-title">Scanner un code-barres</div>
+            <div class="keyboard-display" id="keyboardDisplay"></div>
+            <div class="keyboard-keys">
+                ${[1,2,3,4,5,6,7,8,9,0].map(n => `<button class="key-btn" data-value="${n}">${n}</button>`).join('')}
+                <button class="key-btn key-clear">⌫</button>
+                <button class="key-btn key-enter">↵ Valider</button>
+                <button class="key-btn key-close">✕ Fermer</button>
+            </div>
+        `;
+    } else if (type === 'alphabet') {
+        keyboard.innerHTML = `
+            <div class="keyboard-title">Rechercher un article</div>
+            <div class="keyboard-display" id="keyboardDisplay"></div>
+            <div class="keyboard-keys keyboard-alpha">
+                ${'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l => `<button class="key-btn" data-value="${l}">${l}</button>`).join('')}
+                <button class="key-btn key-space">Espace</button>
+                <button class="key-btn key-clear">⌫</button>
+                <button class="key-btn key-enter">↵ Rechercher</button>
+                <button class="key-btn key-close">✕ Fermer</button>
+            </div>
+        `;
+    }
+
+    document.body.appendChild(keyboard);
+    virtualKeyboard = keyboard;
+
+    let currentInput = '';
+    const display = keyboard.querySelector('#keyboardDisplay');
+
+    const updateDisplay = () => {
+        display.textContent = currentInput || '...';
+    };
+
+    // Gestion des touches
+    keyboard.querySelectorAll('.key-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.classList.contains('key-close')) {
+                keyboard.remove();
+                virtualKeyboard = null;
+                currentInputTarget = null;
+                return;
+            }
+
+            if (btn.classList.contains('key-clear')) {
+                currentInput = currentInput.slice(0, -1);
+                updateDisplay();
+                return;
+            }
+
+            if (btn.classList.contains('key-enter')) {
+                if (currentInputTarget === 'scan') {
+                    handleScan(currentInput);
+                } else if (currentInputTarget === 'price') {
+                    priceCheckInput.value = currentInput;
+                    handlePriceCheck();
+                } else if (currentInputTarget === 'search') {
+                    searchNameInput.value = currentInput;
+                    handleSearchByName();
+                }
+                keyboard.remove();
+                virtualKeyboard = null;
+                currentInputTarget = null;
+                return;
+            }
+
+            if (btn.classList.contains('key-space')) {
+                currentInput += ' ';
+                updateDisplay();
+                return;
+            }
+
+            const value = btn.dataset.value;
+            if (value) {
+                currentInput += value;
+                updateDisplay();
+            }
+        });
+    });
+
+    updateDisplay();
+}
+
+// ─── DERNIÈRES TRANSACTIONS ───
+async function loadLastTransactions() {
+    try {
+        const { data: mouvements, error } = await supabase
+            .from('w_mouvements')
+            .select(`
+                *,
+                w_articles (nom, prix_unitaire)
+            `)
+            .eq('type', 'sortie')
+            .eq('motif', 'vente')
+            .order('date_mouvement', { ascending: false })
+            .order('heure_mouvement', { ascending: false })
+            .limit(50);
+
+        if (error) throw error;
+
+        // Grouper par transaction (même date/heure et même commentaire)
+        const transactions = new Map();
+        mouvements.forEach(m => {
+            const key = `${m.date_mouvement}_${m.heure_mouvement}_${m.commentaire}`;
+            if (!transactions.has(key)) {
+                transactions.set(key, {
+                    id: key,
+                    date: m.date_mouvement,
+                    time: m.heure_mouvement,
+                    total: 0,
+                    mode: m.commentaire?.match(/\((.*?)\)/)?.[1] || 'inconnu',
+                    items: []
+                });
+            }
+            const transaction = transactions.get(key);
+            const price = m.w_articles?.prix_unitaire || 0;
+            transaction.total += price * m.quantite;
+            transaction.items.push({
+                nom: m.w_articles?.nom || 'Article',
+                quantite: m.quantite,
+                prix: price
+            });
+        });
+
+        lastTransactions = Array.from(transactions.values()).slice(0, 10);
+        displayTransactionsModal();
+    } catch (err) {
+        console.error('Erreur chargement transactions:', err);
+        alert('Erreur lors du chargement des transactions');
+    }
+}
+
+function displayTransactionsModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal transactions-modal';
+    modal.style.display = 'flex';
+
+    modal.innerHTML = `
+        <div class="modal-content transactions-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-history"></i> Dernières transactions</h3>
+                <button class="close-modal-btn">&times;</button>
+            </div>
+            <div class="transactions-list">
+                ${lastTransactions.map((t, idx) => `
+                    <div class="transaction-item" data-idx="${idx}">
+                        <div class="transaction-header">
+                            <div class="transaction-date">
+                                <i class="fas fa-calendar"></i> ${t.date} ${t.time}
+                            </div>
+                            <div class="transaction-total">${formatEur(t.total)}</div>
+                        </div>
+                        <div class="transaction-details">
+                            <div class="transaction-mode">
+                                <i class="fas ${t.mode === 'espèces' ? 'fa-money-bill' : t.mode === 'carte' ? 'fa-credit-card' : 'fa-qrcode'}"></i>
+                                ${t.mode}
+                            </div>
+                            <div class="transaction-items-count">${t.items.length} article(s)</div>
+                        </div>
+                        <div class="transaction-actions">
+                            <button class="btn-reprint" data-idx="${idx}">
+                                <i class="fas fa-print"></i> Réimprimer
+                            </button>
+                            <button class="btn-details" data-idx="${idx}">
+                                <i class="fas fa-eye"></i> Détails
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Fermeture
+    modal.querySelector('.close-modal-btn').onclick = () => modal.remove();
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+    // Actions
+    modal.querySelectorAll('.btn-reprint').forEach(btn => {
+        btn.onclick = () => {
+            const idx = parseInt(btn.dataset.idx);
+            reprintTicket(lastTransactions[idx]);
+            modal.remove();
+        };
+    });
+
+    modal.querySelectorAll('.btn-details').forEach(btn => {
+        btn.onclick = () => {
+            const idx = parseInt(btn.dataset.idx);
+            showTransactionDetails(lastTransactions[idx]);
+        };
+    });
+}
+
+function showTransactionDetails(transaction) {
+    const modal = document.createElement('div');
+    modal.className = 'modal details-modal';
+    modal.style.display = 'flex';
+
+    const itemsHtml = transaction.items.map(item => `
+        <div class="detail-item">
+            <span class="detail-name">${escapeHtml(item.nom)}</span>
+            <span class="detail-qty">x${item.quantite}</span>
+            <span class="detail-price">${formatEur(item.prix * item.quantite)}</span>
+        </div>
+    `).join('');
+
+    modal.innerHTML = `
+        <div class="modal-content details-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-receipt"></i> Détail de la transaction</h3>
+                <button class="close-modal-btn">&times;</button>
+            </div>
+            <div class="details-body">
+                <div class="details-info">
+                    <p><strong>Date :</strong> ${transaction.date} à ${transaction.time}</p>
+                    <p><strong>Mode :</strong> ${transaction.mode}</p>
+                </div>
+                <div class="details-items">
+                    <h4>Articles :</h4>
+                    ${itemsHtml}
+                </div>
+                <div class="details-total">
+                    <strong>Total : ${formatEur(transaction.total)}</strong>
+                </div>
+                <button class="btn-reprint-detail" id="reprintDetailBtn">
+                    <i class="fas fa-print"></i> Réimprimer le ticket
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('.close-modal-btn').onclick = () => modal.remove();
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    modal.querySelector('#reprintDetailBtn').onclick = () => {
+        reprintTicket(transaction);
+        modal.remove();
+    };
+}
+
+function reprintTicket(transaction) {
+    // Créer un objet lastSaleData factice pour réimpression
+    const fakeSaleData = {
+        cart: transaction.items.map(item => ({
+            nom: item.nom,
+            prix_unitaire: item.prix,
+            quantity: item.quantite
+        })),
+        total: transaction.total,
+        received: transaction.total,
+        change: 0,
+        modePaiement: transaction.mode,
+        date: new Date(`${transaction.date} ${transaction.time}`)
+    };
+
+    const originalLastSaleData = lastSaleData;
+    lastSaleData = fakeSaleData;
+    printTicket();
+    lastSaleData = originalLastSaleData;
 }
 
 init();

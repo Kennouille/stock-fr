@@ -608,3 +608,179 @@ body {
     align-items: center; padding: 16px 0;
 }
 .qr-loading { color: var(--text3); font-size: 0.9rem; padding: 30px; }
+
+/* CLAVIER VIRTUEL */
+.virtual-keyboard {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg2);
+    border-top: 2px solid var(--accent);
+    padding: 15px;
+    z-index: 10000;
+    box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+}
+
+.keyboard-title {
+    text-align: center;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--accent);
+}
+
+.keyboard-display {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 15px;
+    font-size: 18px;
+    font-family: monospace;
+    text-align: center;
+    min-height: 50px;
+}
+
+.keyboard-keys {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+}
+
+.key-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.1s;
+    min-width: 55px;
+}
+
+.key-btn:active {
+    transform: scale(0.95);
+    background: var(--accent);
+    color: white;
+}
+
+.key-clear, .key-enter, .key-close, .key-space {
+    background: var(--accent);
+    color: white;
+}
+
+.key-close {
+    background: var(--danger);
+}
+
+.keyboard-alpha .key-btn {
+    min-width: 45px;
+    padding: 10px 12px;
+    font-size: 16px;
+}
+
+/* TRANSACTIONS MODAL */
+.transactions-modal .modal-content,
+.details-modal .modal-content {
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.transaction-item {
+    background: var(--bg3);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.transaction-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.transaction-date {
+    font-size: 12px;
+    color: var(--text3);
+}
+
+.transaction-total {
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.transaction-details {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 12px;
+    font-size: 12px;
+}
+
+.transaction-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-reprint, .btn-details, .btn-reprint-detail {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.btn-reprint {
+    background: var(--accent);
+    color: white;
+}
+
+.btn-details {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.details-total {
+    text-align: right;
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 2px solid var(--accent);
+}
+
+/* Cards cliquables */
+.action-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.action-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.action-card:active {
+    transform: translateY(0);
+}
+
+.action-desc {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px;
+}
+
+/* Cache les anciens inputs dans les cards */
+.action-card .input-row,
+.action-card .hint {
+    display: none;
+}
