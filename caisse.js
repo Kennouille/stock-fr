@@ -8,6 +8,12 @@ let taxEnabled = false;
 let amountGiven = 0;
 let pendingArticle = null;
 let lastSaleData = null;
+let stripeInstance = null;
+let stripeElements = null;
+let stripeCardElement = null;
+
+const STRIPE_PUBLIC_KEY = 'pk_test_51T9DBURq7ukXBvuPlqzY6YGQjobMWNxfdUx88YlpNT3iFgsppTne56qWj8UPIbLcUgsvBcH1NxNXrq2FHvlCjGjJ00EetKx4ko';
+const SUPABASE_FUNCTION_URL = 'https://lanxxvocjwpyegoxxxkj.supabase.co/functions/v1/create-payment-intent';
 
 const denominations = [500, 200, 100, 50, 20, 10, 5, 2, 1, 0.50, 0.20, 0.10, 0.05, 0.02, 0.01];
 const counts = {};
@@ -49,12 +55,23 @@ const saleModal           = document.getElementById('saleModal');
 const closeSaleBtn        = document.getElementById('closeSaleBtn');
 const printTicketBtn      = document.getElementById('printTicketBtn');
 const ticketPrint         = document.getElementById('ticketPrint');
+const stripeModal         = document.getElementById('stripeModal');
+const closeStripeModal    = document.getElementById('closeStripeModal');
+const stripePayBtn        = document.getElementById('stripePayBtn');
+const stripeError         = document.getElementById('stripeError');
+const qrModal             = document.getElementById('qrModal');
+const closeQrModal        = document.getElementById('closeQrModal');
+const qrContainer         = document.getElementById('qrContainer');
+const qrAmount            = document.getElementById('qrAmount');
+const btnPayCard          = document.getElementById('btnPayCard');
+const btnPayQr            = document.getElementById('btnPayQr');
 
 // ─── INIT ───
 function init() {
     loadCurrentUser();
     loadTaxConfig();
     checkCaisseAccess();
+    loadStripe();
     setupEventListeners();
     updateCartDisplay();
     setupBeforeUnload();
@@ -81,10 +98,15 @@ function checkCaisseAccess() {
     if (!hasCaissePerm || !isModuleEnabled) window.location.href = 'accueil.html';
 }
 
+function loadStripe() {
+    const script = document.createElement('script');
+    script.src = 'https://js.stripe.com/v3/';
+    script.onload = () => { stripeInstance = Stripe(STRIPE_PUBLIC_KEY); };
+    document.head.appendChild(script);
+}
+
 function setupBeforeUnload() {
-    window.addEventListener('beforeunload', (e) => {
-        if (cart.length > 0) { e.preventDefault(); e.returnValue = ''; }
-    });
+    window.addEventListener('beforeunload', e => { if (cart.length > 0) { e.preventDefault(); e.returnValue = ''; } });
 }
 
 // ─── ÉVÉNEMENTS ───
@@ -100,24 +122,27 @@ function setupEventListeners() {
     priceCheckInput.addEventListener('keypress', e => { if (e.key === 'Enter') handlePriceCheck(); });
 
     clearCartBtn.addEventListener('click', clearCart);
-    validateSaleBtn.addEventListener('click', validateSale);
+    validateSaleBtn.addEventListener('click', validateSaleCash);
     logoutBtn.addEventListener('click', handleLogout);
     resetAmountBtn.addEventListener('click', resetAmount);
 
     closeSaleBtn.addEventListener('click', () => { saleModal.style.display = 'none'; });
     printTicketBtn.addEventListener('click', printTicket);
 
-    // Boutons + billets/pièces
+    // Stripe
+    btnPayCard?.addEventListener('click', openStripeModal);
+    btnPayQr?.addEventListener('click', openQrModal);
+    closeStripeModal?.addEventListener('click', () => { stripeModal.style.display = 'none'; });
+    closeQrModal?.addEventListener('click', () => { qrModal.style.display = 'none'; });
+    stripePayBtn?.addEventListener('click', handleStripePayment);
+
+    // Billets/pièces
     document.querySelectorAll('.mc-btn.plus.money-btn').forEach(btn => {
         btn.addEventListener('click', () => addMoney(parseFloat(btn.dataset.value)));
     });
-
-    // Boutons - billets/pièces
     document.querySelectorAll('.mc-btn.minus').forEach(btn => {
         btn.addEventListener('click', () => removeMoney(parseFloat(btn.dataset.value)));
     });
-
-    // Clic sur image billet/pièce = +1
     document.querySelectorAll('.money-img').forEach(img => {
         img.addEventListener('click', () => {
             const val = parseFloat(img.closest('.money-item').dataset.value);
@@ -138,12 +163,13 @@ function setupEventListeners() {
         btn.addEventListener('click', () => { quantityModal.style.display = 'none'; pendingArticle = null; });
     });
 
-    // Fermer overlay en cliquant hors modal
     quantityModal.addEventListener('click', e => { if (e.target === quantityModal) { quantityModal.style.display = 'none'; pendingArticle = null; } });
     saleModal.addEventListener('click', e => { if (e.target === saleModal) saleModal.style.display = 'none'; });
+    stripeModal?.addEventListener('click', e => { if (e.target === stripeModal) stripeModal.style.display = 'none'; });
+    qrModal?.addEventListener('click', e => { if (e.target === qrModal) qrModal.style.display = 'none'; });
 }
 
-// ─── GESTION MONNAIE ───
+// ─── MONNAIE ───
 function addMoney(val) {
     counts[val] = (counts[val] || 0) + 1;
     updateCountDisplay(val);
@@ -200,11 +226,8 @@ function calculateChange() {
 async function handleScan(code) {
     if (!code.trim()) return;
     const { data: article, error } = await supabase
-        .from('w_articles')
-        .select('id, nom, code_barre, prix_unitaire, stock_actuel')
-        .eq('code_barre', code.trim())
-        .eq('actif', true)
-        .single();
+        .from('w_articles').select('id, nom, code_barre, prix_unitaire, stock_actuel')
+        .eq('code_barre', code.trim()).eq('actif', true).single();
     if (error || !article) { alert('Article non trouvé'); scanInput.value = ''; return; }
     scanInput.value = '';
     openQuantityModal(article);
@@ -215,11 +238,8 @@ async function handleSearchByName() {
     const term = searchNameInput.value.trim();
     if (!term) return;
     const { data: articles, error } = await supabase
-        .from('w_articles')
-        .select('id, nom, code_barre, prix_unitaire, stock_actuel')
-        .ilike('nom', `%${term}%`)
-        .eq('actif', true)
-        .limit(10);
+        .from('w_articles').select('id, nom, code_barre, prix_unitaire, stock_actuel')
+        .ilike('nom', `%${term}%`).eq('actif', true).limit(10);
     if (error) { alert('Erreur de recherche'); return; }
     displaySearchResults(articles);
 }
@@ -257,11 +277,8 @@ async function handlePriceCheck() {
     const code = priceCheckInput.value.trim();
     if (!code) return;
     const { data: article, error } = await supabase
-        .from('w_articles')
-        .select('nom, prix_unitaire')
-        .eq('code_barre', code)
-        .eq('actif', true)
-        .single();
+        .from('w_articles').select('nom, prix_unitaire')
+        .eq('code_barre', code).eq('actif', true).single();
     if (error || !article) { alert('Article non trouvé'); priceCheckInput.value = ''; priceDisplay.style.display = 'none'; return; }
     document.querySelector('.price-article-name').textContent = article.nom;
     document.querySelector('.price-value').textContent = formatEur(article.prix_unitaire);
@@ -304,11 +321,13 @@ function getCartTotal() {
 
 function updateCartDisplay() {
     if (cart.length === 0) {
-        cartBody.innerHTML = `<tr class="empty-row"><td colspan="5"><div class="empty-state"><i class="fas fa-basket-shopping"></i><span>Panier vide — scannez ou recherchez un article</span></div></td></tr>`;
+        cartBody.innerHTML = `<tr class="empty-row"><td colspan="5"><div class="empty-state"><i class="fas fa-basket-shopping"></i><span>Panier vide</span></div></td></tr>`;
         totalTVA.textContent = '0,00 €';
         totalTTC.textContent = '0,00 €';
         btnTotal.textContent = '0,00 €';
         validateSaleBtn.disabled = true;
+        if (btnPayCard) btnPayCard.disabled = true;
+        if (btnPayQr) btnPayQr.disabled = true;
         calculateChange();
         return;
     }
@@ -343,6 +362,8 @@ function updateCartDisplay() {
     totalTTC.textContent = formatEur(ttcTotal);
     btnTotal.textContent = formatEur(ttcTotal);
     validateSaleBtn.disabled = false;
+    if (btnPayCard) btnPayCard.disabled = false;
+    if (btnPayQr) btnPayQr.disabled = false;
     calculateChange();
 }
 
@@ -351,15 +372,111 @@ function clearCart() {
     if (confirm('Vider tout le panier ?')) { cart = []; updateCartDisplay(); resetAmount(); }
 }
 
-// ─── VENTE ───
-async function validateSale() {
+// ─── VENTE ESPÈCES ───
+async function validateSaleCash() {
     if (cart.length === 0) { alert('Panier vide'); return; }
     const total = getCartTotal();
     if (amountGiven < total) { alert(`Montant insuffisant. Total : ${formatEur(total)}`); return; }
-    if (!confirm(`Confirmer la vente de ${cart.length} article(s) pour ${formatEur(total)} ?`)) return;
+    const totalQty = cart.reduce((s, i) => s + i.quantity, 0);
+    if (!confirm(`Confirmer la vente de ${totalQty} article(s) pour ${formatEur(total)} ?`)) return;
+    await enregistrerVente(total, amountGiven, 'espèces');
+}
+
+// ─── STRIPE CARTE ───
+async function openStripeModal() {
+    if (cart.length === 0) return;
+    const total = getCartTotal();
+    document.getElementById('stripeAmount').textContent = formatEur(total);
+    stripeModal.style.display = 'flex';
+    stripeError.textContent = '';
+    stripeError.style.display = 'none';
+
+    if (!stripeInstance) { stripeError.textContent = 'Stripe non chargé, réessayez.'; stripeError.style.display = 'block'; return; }
+
+    stripeElements = stripeInstance.elements();
+    stripeCardElement = stripeElements.create('card', {
+        style: {
+            base: { fontSize: '16px', color: '#1e2a3b', fontFamily: 'Plus Jakarta Sans, sans-serif', '::placeholder': { color: '#8b95ab' } }
+        }
+    });
+    stripeCardElement.mount('#stripe-card-element');
+}
+
+async function handleStripePayment() {
+    if (!stripeCardElement) return;
+    const total = getCartTotal();
+
+    stripePayBtn.disabled = true;
+    stripePayBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traitement…';
+    stripeError.style.display = 'none';
 
     try {
-        const cartSnapshot = [...cart];
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(SUPABASE_FUNCTION_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token || ''}` },
+            body: JSON.stringify({ amount: total, currency: 'eur', type: 'card' })
+        });
+        const { clientSecret, error: fnError } = await res.json();
+        if (fnError) throw new Error(fnError);
+
+        const { paymentIntent, error } = await stripeInstance.confirmCardPayment(clientSecret, {
+            payment_method: { card: stripeCardElement }
+        });
+
+        if (error) throw new Error(error.message);
+        if (paymentIntent.status === 'succeeded') {
+            stripeModal.style.display = 'none';
+            await enregistrerVente(total, total, 'carte');
+        }
+    } catch (err) {
+        stripeError.textContent = err.message;
+        stripeError.style.display = 'block';
+    } finally {
+        stripePayBtn.disabled = false;
+        stripePayBtn.innerHTML = '<i class="fas fa-lock"></i> Payer par carte';
+    }
+}
+
+// ─── STRIPE QR ───
+async function openQrModal() {
+    if (cart.length === 0) return;
+    const total = getCartTotal();
+    qrAmount.textContent = formatEur(total);
+    qrContainer.innerHTML = '<div class="qr-loading"><i class="fas fa-spinner fa-spin"></i> Génération du lien…</div>';
+    qrModal.style.display = 'flex';
+
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(SUPABASE_FUNCTION_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token || ''}` },
+            body: JSON.stringify({ amount: total, currency: 'eur', type: 'qr' })
+        });
+        const { url, error } = await res.json();
+        if (error) throw new Error(error);
+
+        // Générer QR avec une API publique
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
+        qrContainer.innerHTML = `
+            <img src="${qrUrl}" alt="QR Code" style="width:220px;height:220px;border-radius:8px;">
+            <p style="font-size:0.78rem;color:var(--text3);margin-top:8px;text-align:center;">Le client scanne ce code avec son téléphone</p>
+            <button id="qrPaidBtn" class="btn-primary" style="margin-top:12px;width:100%;">
+                <i class="fas fa-check"></i> Le client a payé
+            </button>`;
+        document.getElementById('qrPaidBtn').addEventListener('click', async () => {
+            qrModal.style.display = 'none';
+            await enregistrerVente(total, total, 'QR code');
+        });
+    } catch (err) {
+        qrContainer.innerHTML = `<div style="color:var(--danger);font-size:0.85rem;">${err.message}</div>`;
+    }
+}
+
+// ─── ENREGISTRER VENTE ───
+async function enregistrerVente(total, received, modePaiement) {
+    const cartSnapshot = [...cart];
+    try {
         for (const item of cartSnapshot) {
             const { data: article } = await supabase.from('w_articles').select('stock_actuel').eq('id', item.id).single();
             const newStock = article.stock_actuel - item.quantity;
@@ -370,7 +487,7 @@ async function validateSale() {
                 quantite: item.quantity,
                 utilisateur_id: currentUser?.id,
                 motif: 'vente',
-                commentaire: `Vente caisse — Total: ${formatEur(total)} — Reçu: ${formatEur(amountGiven)}`,
+                commentaire: `Vente caisse (${modePaiement}) — Total: ${formatEur(total)} — Reçu: ${formatEur(received)}`,
                 stock_avant: article.stock_actuel,
                 stock_apres: newStock,
                 date_mouvement: new Date().toISOString().split('T')[0],
@@ -378,16 +495,15 @@ async function validateSale() {
             });
         }
 
-        const change = +(amountGiven - total).toFixed(2);
-        lastSaleData = { cart: cartSnapshot, total, received: amountGiven, change, date: new Date() };
+        const change = modePaiement === 'espèces' ? +(received - total).toFixed(2) : 0;
+        lastSaleData = { cart: cartSnapshot, total, received, change, modePaiement, date: new Date() };
 
-        // Afficher modal de confirmation
         document.getElementById('saleTotal').textContent = formatEur(total);
-        document.getElementById('saleReceived').textContent = formatEur(amountGiven);
-        document.getElementById('saleChange').textContent = formatEur(change);
+        document.getElementById('saleReceived').textContent = formatEur(received);
+        document.getElementById('saleChange').textContent = modePaiement === 'espèces' ? formatEur(change) : '—';
+        document.getElementById('salePayMode').textContent = modePaiement;
         saleModal.style.display = 'flex';
 
-        // Reset
         cart = [];
         updateCartDisplay();
         resetAmount();
@@ -401,53 +517,34 @@ async function validateSale() {
 // ─── TICKET ───
 function printTicket() {
     if (!lastSaleData) return;
-    const { cart: items, total, received, change, date } = lastSaleData;
-
+    const { cart: items, total, received, change, modePaiement, date } = lastSaleData;
     const tvaAmount = taxEnabled ? +(total - total / (1 + taxRate / 100)).toFixed(2) : 0;
     const htAmount = taxEnabled ? +(total - tvaAmount).toFixed(2) : total;
-
     const dateStr = date.toLocaleDateString('fr-FR');
     const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
     const rows = items.map(i => {
         const lineTotal = +(i.prix_unitaire * i.quantity).toFixed(2);
-        return `<tr>
-            <td>${escapeHtml(i.nom)}</td>
-            <td class="right">${i.quantity}</td>
-            <td class="right">${formatEur(i.prix_unitaire)}</td>
-            <td class="right">${formatEur(lineTotal)}</td>
-        </tr>`;
+        return `<tr><td>${escapeHtml(i.nom)}</td><td class="r">${i.quantity}</td><td class="r">${formatEur(i.prix_unitaire)}</td><td class="r">${formatEur(lineTotal)}</td></tr>`;
     }).join('');
 
     ticketPrint.innerHTML = `
         <div class="ticket">
-            <div class="ticket-header">
-                <h1>NeXeN Store</h1>
-                <p>${dateStr} — ${timeStr}</p>
-                <p>Caissier : ${currentUser?.username || '—'}</p>
-            </div>
-            <hr class="ticket-divider">
             <table class="ticket-items">
-                <thead><tr><th>Article</th><th class="right">Qté</th><th class="right">P.U.</th><th class="right">Total</th></tr></thead>
+                <thead><tr><th>Article</th><th class="r">Qté</th><th class="r">P.U.</th><th class="r">Total</th></tr></thead>
                 <tbody>${rows}</tbody>
             </table>
             <hr class="ticket-divider">
             <table class="ticket-totals">
-                ${taxEnabled ? `
-                <tr><td>Montant HT</td><td class="right">${formatEur(htAmount)}</td></tr>
-                <tr><td>TVA ${taxRate}%</td><td class="right">${formatEur(tvaAmount)}</td></tr>
-                ` : ''}
-                <tr class="grand"><td><strong>TOTAL TTC</strong></td><td class="right"><strong>${formatEur(total)}</strong></td></tr>
-                <tr><td>Montant reçu</td><td class="right">${formatEur(received)}</td></tr>
-                <tr><td><strong>Monnaie rendue</strong></td><td class="right"><strong>${formatEur(change)}</strong></td></tr>
+                ${taxEnabled ? `<tr><td>Montant HT</td><td class="r">${formatEur(htAmount)}</td></tr><tr><td>TVA ${taxRate}%</td><td class="r">${formatEur(tvaAmount)}</td></tr>` : ''}
+                <tr class="ticket-grand"><td><strong>TOTAL TTC</strong></td><td class="r"><strong>${formatEur(total)}</strong></td></tr>
+                <tr><td>Mode de paiement</td><td class="r">${modePaiement}</td></tr>
+                <tr><td>Montant reçu</td><td class="r">${formatEur(received)}</td></tr>
+                ${modePaiement === 'espèces' ? `<tr><td><strong>Monnaie rendue</strong></td><td class="r"><strong>${formatEur(change)}</strong></td></tr>` : ''}
             </table>
             <hr class="ticket-divider">
-            <div class="ticket-footer">
-                <p>Merci de votre achat !</p>
-                <p>À bientôt chez NeXeN Store</p>
-            </div>
+            <div class="ticket-footer"><p>${dateStr} ${timeStr} — ${currentUser?.username || ''}</p></div>
         </div>`;
-
     window.print();
 }
 
@@ -455,12 +552,10 @@ function printTicket() {
 function formatEur(val) {
     return Number(val).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 }
-
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
 }
-
 async function handleLogout() {
     await supabase.auth.signOut();
     sessionStorage.removeItem('current_user');

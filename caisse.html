@@ -121,9 +121,17 @@
                 <span class="fb-amount" id="missingAmount">0,00 €</span>
             </div>
 
+            <button id="btnPayCard" class="btn-pay-card" disabled>
+                <i class="fas fa-credit-card"></i>
+                <span>Carte</span>
+            </button>
+            <button id="btnPayQr" class="btn-pay-qr" disabled>
+                <i class="fas fa-qrcode"></i>
+                <span>QR Code</span>
+            </button>
             <button id="validateSaleBtn" class="btn-validate" disabled>
-                <i class="fas fa-check-circle"></i>
-                <span>Valider la vente</span>
+                <i class="fas fa-coins"></i>
+                <span>Espèces</span>
                 <span class="btn-total-badge" id="btnTotal">0,00 €</span>
             </button>
         </div>
@@ -292,6 +300,45 @@
     </aside>
 </div>
 
+<!-- MODAL STRIPE CARTE -->
+<div id="stripeModal" class="overlay" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3><i class="fas fa-credit-card"></i> Paiement par carte</h3>
+            <button id="closeStripeModal" class="btn-close"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="stripe-amount-display">
+                Total à payer : <strong id="stripeAmount">0,00 €</strong>
+            </div>
+            <div id="stripe-card-element" class="stripe-card-element"></div>
+            <div id="stripeError" class="stripe-error" style="display:none;"></div>
+        </div>
+        <div class="modal-foot">
+            <button id="stripePayBtn" class="btn-primary">
+                <i class="fas fa-lock"></i> Payer par carte
+            </button>
+            <button class="btn-ghost" id="closeStripeModal2">Annuler</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL QR CODE -->
+<div id="qrModal" class="overlay" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h3><i class="fas fa-qrcode"></i> Paiement par QR code</h3>
+            <button id="closeQrModal" class="btn-close"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" style="text-align:center;">
+            <div class="stripe-amount-display">
+                Total à payer : <strong id="qrAmount">0,00 €</strong>
+            </div>
+            <div id="qrContainer" class="qr-container"></div>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL QUANTITÉ -->
 <div id="quantityModal" class="overlay" style="display:none;">
     <div class="modal-box">
@@ -320,6 +367,10 @@
         <div class="sale-check"><i class="fas fa-check"></i></div>
         <h2 class="sale-title">Vente enregistrée !</h2>
         <div class="sale-amounts">
+            <div class="sale-row">
+                <span>Mode de paiement</span>
+                <strong id="salePayMode">—</strong>
+            </div>
             <div class="sale-row">
                 <span>Total TTC</span>
                 <strong id="saleTotal">0,00 €</strong>
