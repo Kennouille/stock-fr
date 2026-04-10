@@ -411,28 +411,41 @@ async function handleStripePayment() {
     stripeError.style.display = 'none';
 
     try {
-        // Appel à votre edge function
+        // Afficher ce qu'on envoie
+        const requestBody = {
+            amount: total,
+            currency: 'eur',
+            type: 'card'  // ⚠️ Vérifiez que c'est bien 'card' en minuscules
+        };
+        console.log('📤 Envoi à la fonction:', requestBody);
+
         const res = await fetch(SUPABASE_FUNCTION_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                amount: total,
-                currency: 'eur',
-                type: 'card'  // Important: type 'card'
-            })
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
         });
 
+        console.log('📥 Statut réponse:', res.status);
+
         const data = await res.json();
-        console.log('Réponse edge function:', data);
+        console.log('📥 Réponse complète reçue:', data);
 
-        if (data.error) throw new Error(data.error);
-
-        // Vérifier que clientSecret existe
-        if (!data.clientSecret) {
-            throw new Error('Pas de clientSecret reçu');
+        if (data.error) {
+            console.error('❌ Erreur dans la réponse:', data.error);
+            throw new Error(data.error);
         }
 
-        // Confirmer le paiement avec le client_secret
+        // Vérifier que clientSecret existe (note: c'est clientSecret pas client_secret)
+        if (!data.clientSecret) {
+            console.error('❌ Pas de clientSecret dans la réponse. Réponse:', data);
+            throw new Error('Pas de clientSecret reçu du serveur');
+        }
+
+        console.log('✅ clientSecret reçu:', data.clientSecret);
+
+        // Confirmer le paiement
         const { paymentIntent, error } = await stripeInstance.confirmCardPayment(data.clientSecret, {
             payment_method: {
                 card: stripeCardElement
@@ -440,9 +453,11 @@ async function handleStripePayment() {
         });
 
         if (error) {
-            console.error('Erreur confirmation:', error);
+            console.error('❌ Erreur confirmation Stripe:', error);
             throw new Error(error.message);
         }
+
+        console.log('✅ Paiement réussi:', paymentIntent.status);
 
         if (paymentIntent.status === 'succeeded') {
             stripeModal.style.display = 'none';
@@ -450,7 +465,7 @@ async function handleStripePayment() {
         }
 
     } catch (err) {
-        console.error('Erreur paiement carte:', err);
+        console.error('❌ Erreur handleStripePayment:', err);
         stripeError.textContent = err.message;
         stripeError.style.display = 'block';
     } finally {
