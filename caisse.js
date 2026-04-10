@@ -611,26 +611,78 @@ function printTicket() {
 
     const rows = items.map(i => {
         const lineTotal = +(i.prix_unitaire * i.quantity).toFixed(2);
-        return `<tr><td>${escapeHtml(i.nom)}</td><td class="r">${i.quantity}</td><td class="r">${formatEur(i.prix_unitaire)}</td><td class="r">${formatEur(lineTotal)}</td></tr>`;
+        return `
+            <tr>
+                <td>${escapeHtml(i.nom)}</td>
+                <td class="r">${i.quantity}</td>
+                <td class="r">${formatEur(i.prix_unitaire)}</td>
+                <td class="r">${formatEur(lineTotal)}</td>
+            </tr>
+        `;
     }).join('');
 
     ticketPrint.innerHTML = `
         <div class="ticket">
+            <div class="ticket-store">NeXeN Store</div>
+            <div class="ticket-meta">${dateStr} — ${timeStr}</div>
+            <div class="ticket-meta">Caissier : ${currentUser?.username || ''}</div>
+
+            <hr class="ticket-divider">
+
             <table class="ticket-items">
-                <thead><tr><th>Article</th><th class="r">Qté</th><th class="r">P.U.</th><th class="r">Total</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>Article</th>
+                        <th class="r">Qté</th>
+                        <th class="r">P.U.</th>
+                        <th class="r">Total</th>
+                    </tr>
+                </thead>
                 <tbody>${rows}</tbody>
             </table>
+
             <hr class="ticket-divider">
+
             <table class="ticket-totals">
-                ${taxEnabled ? `<tr><td>Montant HT</td><td class="r">${formatEur(htAmount)}</td></tr><tr><td>TVA ${taxRate}%</td><td class="r">${formatEur(tvaAmount)}</td></tr>` : ''}
-                <tr class="ticket-grand"><td><strong>TOTAL TTC</strong></td><td class="r"><strong>${formatEur(total)}</strong></td></tr>
-                <tr><td>Mode de paiement</td><td class="r">${modePaiement}</td></tr>
-                <tr><td>Montant reçu</td><td class="r">${formatEur(received)}</td></tr>
-                ${modePaiement === 'espèces' ? `<tr><td><strong>Monnaie rendue</strong></td><td class="r"><strong>${formatEur(change)}</strong></td></tr>` : ''}
+                ${taxEnabled ? `
+                    <tr>
+                        <td>Montant HT</td>
+                        <td class="r">${formatEur(htAmount)}</td>
+                    </tr>
+                    <tr>
+                        <td>TVA ${taxRate}%</td>
+                        <td class="r">${formatEur(tvaAmount)}</td>
+                    </tr>
+                ` : ''}
+                <tr class="ticket-grand">
+                    <td><strong>TOTAL TTC</strong></td>
+                    <td class="r"><strong>${formatEur(total)}</strong></td>
+                </tr>
+                <tr>
+                    <td>Mode de paiement</td>
+                    <td class="r">${modePaiement === 'carte' ? 'Carte bancaire' : modePaiement === 'QR code' ? 'QR code' : 'Espèces'}</td>
+                </tr>
+                <tr>
+                    <td>Montant reçu</td>
+                    <td class="r">${formatEur(received)}</td>
+                </tr>
+                ${modePaiement === 'espèces' ? `
+                    <tr>
+                        <td><strong>Monnaie rendue</strong></td>
+                        <td class="r"><strong>${formatEur(change)}</strong></td>
+                    </tr>
+                ` : ''}
             </table>
+
             <hr class="ticket-divider">
-            <div class="ticket-footer"><p>${dateStr} ${timeStr} — ${currentUser?.username || ''}</p></div>
-        </div>`;
+
+            <div class="ticket-footer">
+                Merci de votre achat !<br>
+                À bientôt chez NeXeN Store
+            </div>
+        </div>
+    `;
+
     window.print();
 }
 
