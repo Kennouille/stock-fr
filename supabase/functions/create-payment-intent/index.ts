@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
     return new Response('ok', {
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, content-type',
+        'Access-Control-Allow-Headers': '*',
       },
     });
   }
@@ -18,10 +18,22 @@ Deno.serve(async (req) => {
     const { amount, currency = 'eur', type } = await req.json();
 
     if (type === 'qr') {
-      const paymentLink = await stripe.paymentLinks.create({
-        line_items: [{ price_data: { currency, product_data: { name: 'Achat en magasin' }, unit_amount: Math.round(amount * 100) }, quantity: 1 }],
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency,
+            product_data: { name: 'Achat en magasin' },
+            unit_amount: Math.round(amount * 100),
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: 'https://stock-fr.pages.dev/caisse.html?paid=1',
+        cancel_url: 'https://stock-fr.pages.dev/caisse.html?paid=0',
       });
-      return new Response(JSON.stringify({ url: paymentLink.url }), {
+
+      return new Response(JSON.stringify({ url: session.url }), {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       });
     }

@@ -411,16 +411,15 @@ async function handleStripePayment() {
     stripeError.style.display = 'none';
 
     try {
-        const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch(SUPABASE_FUNCTION_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token || ''}` },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ amount: total, currency: 'eur', type: 'card' })
         });
-        const { clientSecret, error: fnError } = await res.json();
-        if (fnError) throw new Error(fnError);
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
 
-        const { paymentIntent, error } = await stripeInstance.confirmCardPayment(clientSecret, {
+        const { paymentIntent, error } = await stripeInstance.confirmCardPayment(json.clientSecret, {
             payment_method: { card: stripeCardElement }
         });
 
@@ -438,7 +437,6 @@ async function handleStripePayment() {
     }
 }
 
-// ─── STRIPE QR ───
 async function openQrModal() {
     if (cart.length === 0) return;
     const total = getCartTotal();
@@ -447,17 +445,15 @@ async function openQrModal() {
     qrModal.style.display = 'flex';
 
     try {
-        const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch(SUPABASE_FUNCTION_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token || ''}` },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ amount: total, currency: 'eur', type: 'qr' })
         });
-        const { url, error } = await res.json();
-        if (error) throw new Error(error);
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
 
-        // Générer QR avec une API publique
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(json.url)}`;
         qrContainer.innerHTML = `
             <img src="${qrUrl}" alt="QR Code" style="width:220px;height:220px;border-radius:8px;">
             <p style="font-size:0.78rem;color:var(--text3);margin-top:8px;text-align:center;">Le client scanne ce code avec son téléphone</p>
