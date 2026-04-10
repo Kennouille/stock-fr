@@ -17,23 +17,21 @@ Deno.serve(async (req) => {
   try {
     const { amount, currency = 'eur', type } = await req.json();
 
+    // index.ts - modifiez la partie QR
     if (type === 'qr') {
-      const session = await stripe.checkout.sessions.create({
+      // Créer un PaymentIntent comme pour la carte
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount * 100),
+        currency,
         payment_method_types: ['card'],
-        line_items: [{
-          price_data: {
-            currency,
-            product_data: { name: 'Achat en magasin' },
-            unit_amount: Math.round(amount * 100),
-          },
-          quantity: 1,
-        }],
-        mode: 'payment',
-        success_url: 'https://stock-fr.pages.dev/caisse.html?paid=1',
-        cancel_url: 'https://stock-fr.pages.dev/caisse.html?paid=0',
+        // Ajoutez une description pour identifier que c'est un paiement QR
+        metadata: {
+          payment_type: 'qr_code'
+        }
       });
 
-      return new Response(JSON.stringify({ url: session.url }), {
+      // Renvoyer le client_secret
+      return new Response(JSON.stringify({ clientSecret: paymentIntent.client_secret }), {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       });
     }

@@ -419,7 +419,7 @@ async function handleStripePayment() {
         const json = await res.json();
         if (json.error) throw new Error(json.error);
 
-        const { paymentIntent, error } = await stripeInstance.confirmCardPayment(json.clientSecret, {
+        const { paymentIntent, error } = await stripeInstance.confirmCardPayment(json.client_secret, {
             payment_method: { card: stripeCardElement }
         });
 
@@ -437,11 +437,12 @@ async function handleStripePayment() {
     }
 }
 
+// caisse.js - fonction openQrModal modifiée
 async function openQrModal() {
     if (cart.length === 0) return;
     const total = getCartTotal();
     qrAmount.textContent = formatEur(total);
-    qrContainer.innerHTML = '<div class="qr-loading"><i class="fas fa-spinner fa-spin"></i> Génération du lien…</div>';
+    qrContainer.innerHTML = '<div class="qr-loading"><i class="fas fa-spinner fa-spin"></i> Génération du lien de paiement…</div>';
     qrModal.style.display = 'flex';
 
     try {
@@ -453,19 +454,58 @@ async function openQrModal() {
         const json = await res.json();
         if (json.error) throw new Error(json.error);
 
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(json.url)}`;
-        qrContainer.innerHTML = `
-            <img src="${qrUrl}" alt="QR Code" style="width:220px;height:220px;border-radius:8px;">
-            <p style="font-size:0.78rem;color:var(--text3);margin-top:8px;text-align:center;">Le client scanne ce code avec son téléphone</p>
-            <button id="qrPaidBtn" class="btn-primary" style="margin-top:12px;width:100%;">
-                <i class="fas fa-check"></i> Le client a payé
-            </button>`;
-        document.getElementById('qrPaidBtn').addEventListener('click', async () => {
-            qrModal.style.display = 'none';
-            await enregistrerVente(total, total, 'QR code');
+        // Créer une URL de paiement Stripe Checkout
+        // Note : Pour un vrai QR code, vous devriez utiliser Checkout Sessions
+        // mais cela nécessite une URL de retour
+
+        // Solution alternative : Utiliser Stripe Checkout Session
+        const checkoutRes = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${STRIPE_SECRET_KEY}`,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                'payment_method_types[]': 'card',
+                'line_items[0][price_data][currency]': 'eur',
+                'line_items[0][price_data][product_data][name]': 'Paiement en magasin',
+                'line_items[0][price_data][unit_amount]': Math.round(total * 100),
+                'line_items[0][quantity]': '1',
+                'mode': 'payment',
+                'success_url': window.location.origin + '/caisse.html?payment_success=1',
+                'cancel_url': window.location.origin + '/caisse.html?payment_cancel=1',
+            })
         });
+
+        const checkoutData = await checkoutRes.json();
+
+        if (checkoutData.url) {
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(checkoutData.url)}`;
+            qrContainer.innerHTML = `
+                <img src="${qrUrl}" alt="QR Code" style="width:220px;height:220px;border-radius:8px;">
+                <p style="font-size:0.78rem;color:var(--text3);margin-top:8px;text-align:center;">Le client scanne ce code avec son téléphone</p>
+                <div style="margin-top:12px;display:flex;gap:8px;">
+                    <button id="qrRefreshBtn" class="btn-secondary" style="flex:1;">
+                        <i class="fas fa-sync"></i> Rafraîchir
+                    </button>
+                    <button id="qrPaidBtn" class="btn-primary" style="flex:1;">
+                        <i class="fas fa-check"></i> Paiement validé
+                    </button>
+                </div>`;
+
+            document.getElementById('qrPaidBtn').addEventListener('click', async () => {
+                qrModal.style.display = 'none';
+                await enregistrerVente(total, total, 'QR code');
+            });
+
+            document.getElementById('qrRefreshBtn').addEventListener('click', () => {
+                openQrModal(); // Re-générer le QR
+            });
+        } else {
+            throw new Error('Impossible de créer la session de paiement');
+        }
     } catch (err) {
-        qrContainer.innerHTML = `<div style="color:var(--danger);font-size:0.85rem;">${err.message}</div>`;
+        qrContainer.innerHTML = `<div style="color:var(--danger);font-size:0.85rem;">Erreur: ${err.message}<br><button onclick="openQrModal()" class="btn-secondary" style="margin-top:8px;">Réessayer</button></div>`;
     }
 }
 
