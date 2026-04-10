@@ -360,15 +360,40 @@ body {
 }
 .money-block-title i { color: var(--accent); }
 
-.bills-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 8px;
+.money-grid { display: flex; flex-direction: column; gap: 10px; }
+
+.money-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 8px 12px;
 }
-.coins-grid {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 8px;
+
+.money-divider {
+    width: 1px;
+    height: 50px;
+    background: var(--border2);
+    flex-shrink: 0;
+    margin: 0 4px;
+}
+
+.bill-img {
+    width: 38px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+    box-shadow: var(--shadow-sm);
+}
+
+.coin-img {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    border-radius: 50%;
+    box-shadow: var(--shadow-sm);
 }
 
 .money-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
