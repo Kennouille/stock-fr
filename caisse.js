@@ -1686,7 +1686,7 @@ function printReturnExchangeTicket() {
     const date = new Date();
     const dateStr = date.toLocaleDateString('fr-FR');
     const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    const diff = reMode === 'exchange'
+    const diff = (reMode === 'exchange' && reNewArticle && reOldArticle)
         ? +(reNewArticle.prix_unitaire - reOldArticle.prix_unitaire).toFixed(2)
         : 0;
 
