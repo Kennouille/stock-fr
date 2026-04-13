@@ -427,9 +427,51 @@ async function validateSplitPayment() {
     if (cardPayments.length === 0) {
         await enregistrerVenteFractionnee(total, cashReceived, 'espèces');
     } else {
-        // Pour le premier paiement par carte, ouvrir Stripe
-        await processCardPayments(total, cashReceived, cardPayments);
+        // Ouvrir Stripe pour le montant total de la carte
+        const totalCard = cardPayments.reduce((a, b) => a + b, 0);
+        await processCardPaymentForSplit(total, cashReceived, totalCard);
     }
+}
+
+async function processCardPaymentForSplit(total, cashReceived, cardAmount) {
+    // Fermer le panel fractionné
+    closeSplitPanel();
+
+    // Ouvrir le modal Stripe avec le montant de la carte
+    const totalCart = getCartTotal();
+
+    // Stocker temporairement que c'est un paiement fractionné
+    sessionStorage.setItem('splitPending', JSON.stringify({
+        total: total,
+        cashReceived: cashReceived,
+        cardAmount: cardAmount
+    }));
+
+    // Ouvrir le modal Stripe
+    await openStripeModalForSplit(cardAmount);
+}
+
+async function openStripeModalForSplit(amount) {
+    if (cart.length === 0) return;
+
+    document.getElementById('stripeAmount').textContent = formatEur(amount);
+    stripeModal.style.display = 'flex';
+    stripeError.textContent = '';
+    stripeError.style.display = 'none';
+
+    if (!stripeInstance) {
+        stripeError.textContent = 'Stripe non chargé, réessayez.';
+        stripeError.style.display = 'block';
+        return;
+    }
+
+    stripeElements = stripeInstance.elements();
+    stripeCardElement = stripeElements.create('card', {
+        style: {
+            base: { fontSize: '16px', color: '#1e2a3b', fontFamily: 'Plus Jakarta Sans, sans-serif', '::placeholder': { color: '#8b95ab' } }
+        }
+    });
+    stripeCardElement.mount('#stripe-card-element');
 }
 
 async function enregistrerVenteFractionnee(total, cashReceived, modePaiement) {
@@ -764,7 +806,16 @@ async function handleStripePayment() {
 
         if (paymentIntent.status === 'succeeded') {
             stripeModal.style.display = 'none';
-            await enregistrerVente(total, total, 'carte');
+
+            // Vérifier si c'est un paiement fractionné
+            const splitPending = sessionStorage.getItem('splitPending');
+            if (splitPending) {
+                const splitData = JSON.parse(splitPending);
+                sessionStorage.removeItem('splitPending');
+                await enregistrerVenteFractionnee(splitData.total, splitData.cashReceived, `espèces (${formatEur(splitData.cashReceived)}) + carte (${formatEur(splitData.cardAmount)})`);
+            } else {
+                await enregistrerVente(total, total, 'carte');
+            }
         }
 
     } catch (err) {
