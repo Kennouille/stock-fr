@@ -996,8 +996,7 @@ async function loadLastTransactions() {
                 *,
                 w_articles (nom, prix_unitaire)
             `)
-            .eq('type', 'sortie')
-            .eq('motif', 'vente')
+            .in('motif', ['vente', 'retour', 'echange'])
             .order('date_mouvement', { ascending: false })
             .order('heure_mouvement', { ascending: false })
             .limit(50);
