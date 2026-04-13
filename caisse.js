@@ -760,6 +760,8 @@ async function enregistrerVente(total, received, modePaiement, multiPayments = n
                 .join('\n');
         }
 
+        const changeToReturn = +(totalReceived - total).toFixed(2);
+
         lastSaleData = {
             cart: cartSnapshot,
             total,
@@ -770,7 +772,6 @@ async function enregistrerVente(total, received, modePaiement, multiPayments = n
             multiPayments: multiPayments
         };
 
-        const changeToReturn = +(totalReceived - total).toFixed(2);
         document.getElementById('saleTotal').textContent = formatEur(total);
         document.getElementById('saleReceived').textContent = formatEur(totalReceived);
         document.getElementById('saleChange').textContent = changeToReturn > 0 ? formatEur(changeToReturn) : '—';
