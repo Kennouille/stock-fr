@@ -436,7 +436,11 @@ function addToCartWithQuantity() {
 }
 
 function getCartTotal() {
-    return +cart.reduce((s, i) => s + i.prix_unitaire * i.quantity, 0).toFixed(2);
+    return +cart.reduce((s, i) => {
+        const discount = i.discount || 0;
+        const discountedPrice = +(i.prix_unitaire * (1 - discount / 100)).toFixed(2);
+        return s + discountedPrice * i.quantity;
+    }, 0).toFixed(2);
 }
 
 function updateCartDisplay() {
