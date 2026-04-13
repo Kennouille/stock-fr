@@ -79,6 +79,7 @@ function init() {
     setupEventListeners();
     updateCartDisplay();
     setupBeforeUnload();
+    checkCaisseSession();
 }
 
 function loadCurrentUser() {
@@ -1590,12 +1591,59 @@ function showHeldCartsModal() {
 }
 
 // ─── FERMETURE DE CAISSE ───
-document.getElementById('closeCaisseCard')?.addEventListener('click', () => {
+let reportData = null;
+let currentCaisseSession = null;
+
+async function checkCaisseSession() {
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('caisseReportDate').value = today;
-    document.getElementById('reportContent').style.display = 'none';
-    document.getElementById('reportEmpty').style.display = 'none';
-    document.getElementById('closeCaisseModal').style.display = 'flex';
+    const { data, error } = await supabase
+        .from('w_caisse_sessions')
+        .select('*')
+        .eq('date', today)
+        .eq('statut', 'ouverte')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (data) {
+        currentCaisseSession = data;
+        document.getElementById('caisseCardLabel').textContent = 'Fermeture de caisse';
+        document.getElementById('caisseCardDesc').textContent = `Ouverte à ${data.heure_ouverture} — Fond : ${formatEur(data.fond_ouverture)}`;
+    } else {
+        currentCaisseSession = null;
+        document.getElementById('caisseCardLabel').textContent = 'Ouverture de caisse';
+        document.getElementById('caisseCardDesc').textContent = 'Démarrer la journée';
+    }
+}
+
+document.getElementById('closeCaisseCard')?.addEventListener('click', async () => {
+    await checkCaisseSession();
+    const modal = document.getElementById('closeCaisseModal');
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const timeNow = now.toTimeString().slice(0, 5);
+
+    if (!currentCaisseSession) {
+        // Mode ouverture
+        document.getElementById('caisseModalTitle').textContent = 'Ouverture de caisse';
+        document.getElementById('panneauOuverture').style.display = 'block';
+        document.getElementById('panneauFermeture').style.display = 'none';
+        document.getElementById('ouvertureDate').value = today;
+        document.getElementById('ouvertureHeure').value = timeNow;
+        document.getElementById('fondOuvertureInput').value = '';
+    } else {
+        // Mode fermeture
+        document.getElementById('caisseModalTitle').textContent = 'Fermeture de caisse';
+        document.getElementById('panneauOuverture').style.display = 'none';
+        document.getElementById('panneauFermeture').style.display = 'block';
+        document.getElementById('sessionOuvertureInfo').textContent = `${currentCaisseSession.date} à ${currentCaisseSession.heure_ouverture}`;
+        document.getElementById('sessionFondInitial').textContent = formatEur(currentCaisseSession.fond_ouverture);
+        document.getElementById('caisseReportDate').value = today;
+        document.getElementById('reportContent').style.display = 'none';
+        document.getElementById('reportEmpty').style.display = 'none';
+    }
+
+    modal.style.display = 'flex';
 });
 
 document.getElementById('closeCloseCaisseModal')?.addEventListener('click', () => {
@@ -1607,12 +1655,41 @@ document.getElementById('closeCaisseModal')?.addEventListener('click', e => {
         document.getElementById('closeCaisseModal').style.display = 'none';
 });
 
+document.getElementById('confirmerOuvertureBtn')?.addEventListener('click', async () => {
+    const date = document.getElementById('ouvertureDate').value;
+    const heure = document.getElementById('ouvertureHeure').value;
+    const fond = parseFloat(document.getElementById('fondOuvertureInput').value) || 0;
+
+    if (!date || !heure) { alert('Veuillez renseigner la date et l\'heure'); return; }
+
+    try {
+        const { data, error } = await supabase.from('w_caisse_sessions').insert({
+            date,
+            heure_ouverture: heure,
+            fond_ouverture: fond,
+            utilisateur_id: currentUser?.id,
+            statut: 'ouverte'
+        }).select().single();
+
+        if (error) throw error;
+
+        currentCaisseSession = data;
+        document.getElementById('caisseCardLabel').textContent = 'Fermeture de caisse';
+        document.getElementById('caisseCardDesc').textContent = `Ouverte à ${heure} — Fond : ${formatEur(fond)}`;
+        document.getElementById('closeCaisseModal').style.display = 'none';
+        alert(`Caisse ouverte à ${heure} avec un fond de ${formatEur(fond)}`);
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de l\'ouverture de caisse');
+    }
+});
+
 document.getElementById('loadReportBtn')?.addEventListener('click', loadCaisseReport);
 
 document.getElementById('fondCaisseInput')?.addEventListener('input', () => {
     const val = parseFloat(document.getElementById('fondCaisseInput').value) || 0;
-    const totalEspeces = parseFloat(document.getElementById('fondCaisseInput').dataset.especes || 0);
-    const diff = +(val - totalEspeces).toFixed(2);
+    const fondAttendu = parseFloat(document.getElementById('fondCaisseInput').dataset.fondAttendu || 0);
+    const diff = +(val - fondAttendu).toFixed(2);
     const resultEl = document.getElementById('fondCaisseResult');
     resultEl.style.display = 'block';
     if (Math.abs(diff) < 0.01) {
@@ -1627,7 +1704,31 @@ document.getElementById('fondCaisseInput')?.addEventListener('input', () => {
 document.getElementById('exportCsvBtn')?.addEventListener('click', exportCaisseCSV);
 document.getElementById('printReportBtn')?.addEventListener('click', printCaisseReport);
 
-let reportData = null;
+document.getElementById('confirmerFermetureBtn')?.addEventListener('click', async () => {
+    if (!currentCaisseSession) return;
+    if (!confirm('Confirmer la fermeture de la caisse pour aujourd\'hui ?')) return;
+
+    const now = new Date();
+    const heureFermeture = now.toTimeString().slice(0, 5);
+    const fondFermeture = parseFloat(document.getElementById('fondCaisseInput').value) || null;
+
+    try {
+        await supabase.from('w_caisse_sessions').update({
+            heure_fermeture: heureFermeture,
+            fond_fermeture: fondFermeture,
+            statut: 'fermee'
+        }).eq('id', currentCaisseSession.id);
+
+        currentCaisseSession = null;
+        document.getElementById('caisseCardLabel').textContent = 'Ouverture de caisse';
+        document.getElementById('caisseCardDesc').textContent = 'Démarrer la journée';
+        document.getElementById('closeCaisseModal').style.display = 'none';
+        alert(`Caisse fermée à ${heureFermeture}`);
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de la fermeture de caisse');
+    }
+});
 
 async function loadCaisseReport() {
     const date = document.getElementById('caisseReportDate').value;
@@ -1683,28 +1784,38 @@ async function loadCaisseReport() {
         const ticketMoyen = nbTransactions > 0 ? +(totalVentes / nbTransactions).toFixed(2) : 0;
         const nbArticles = ventesArray.reduce((s, t) => s + t.items.reduce((ss, i) => ss + i.quantite, 0), 0);
 
-        // Répartition par mode de paiement
-        const paymentMap = {};
+        // Répartition par mode de paiement — regrouper espèces, carte, QR
+        const paymentMap = { 'espèces': 0, 'carte': 0, 'QR code': 0 };
+        let nbCarte = 0;
         ventesArray.forEach(t => {
-            const modes = t.mode.split('\n');
-            modes.forEach(modeStr => {
-                const amountMatch = modeStr.match(/([\d\s,]+\s€)/);
-                const amount = amountMatch
-                    ? parseFloat(amountMatch[1].replace(/\s/g, '').replace(',', '.').replace('€', ''))
-                    : t.total;
-                const label = modeStr.includes('Espèces') ? 'espèces'
-                    : modeStr.includes('Carte') ? 'carte'
-                    : modeStr.includes('QR') ? 'QR code'
-                    : modeStr.trim();
-                paymentMap[label] = (paymentMap[label] || 0) + amount;
-            });
+            const rawMode = t.mode || '';
+            // Paiement multiple : contient des montants entre parenthèses
+            if (rawMode.includes('(') ) {
+                const espMatch = rawMode.match(/Espèces\s*\(([\d\s,]+)\s*€\)/i);
+                const carteMatch = rawMode.match(/Carte\s*\(([\d\s,]+)\s*€\)/i);
+                const qrMatch = rawMode.match(/QR code\s*\(([\d\s,]+)\s*€\)/i);
+                if (espMatch) paymentMap['espèces'] += parseFloat(espMatch[1].replace(/\s/g,'').replace(',','.'));
+                if (carteMatch) { paymentMap['carte'] += parseFloat(carteMatch[1].replace(/\s/g,'').replace(',','.')); nbCarte++; }
+                if (qrMatch) paymentMap['QR code'] += parseFloat(qrMatch[1].replace(/\s/g,'').replace(',','.'));
+            } else if (rawMode === 'espèces') {
+                paymentMap['espèces'] += t.total;
+            } else if (rawMode === 'carte') {
+                paymentMap['carte'] += t.total; nbCarte++;
+            } else if (rawMode === 'QR code') {
+                paymentMap['QR code'] += t.total;
+            }
         });
 
-        // Retours et échanges
+        // Retours espèces (à déduire du fond)
         const retours = mouvements.filter(m => m.motif === 'retour' && m.type === 'entree');
         const echanges = mouvements.filter(m => m.motif === 'echange' && m.type === 'entree');
+        const totalRetours = +retours.reduce((s, m) => s + (m.w_articles?.prix_unitaire || 0) * m.quantite, 0).toFixed(2);
 
-        reportData = { date, ventesArray, totalVentes, nbTransactions, ticketMoyen, nbArticles, paymentMap, retours, echanges };
+        // Fond attendu = fond initial + espèces reçues - retours espèces
+        const fondInitial = currentCaisseSession?.fond_ouverture || 0;
+        const fondAttendu = +(fondInitial + paymentMap['espèces'] - totalRetours).toFixed(2);
+
+        reportData = { date, ventesArray, totalVentes, nbTransactions, ticketMoyen, nbArticles, paymentMap, retours, echanges, totalRetours, fondAttendu, nbCarte };
 
         // Affichage stats
         document.getElementById('reportTotalVentes').textContent = formatEur(totalVentes);
@@ -1714,21 +1825,23 @@ async function loadCaisseReport() {
 
         // Répartition paiement
         const paymentIcons = { 'espèces': 'fa-money-bill', 'carte': 'fa-credit-card', 'QR code': 'fa-qrcode' };
-        document.getElementById('reportPaymentBreakdown').innerHTML = Object.entries(paymentMap).map(([mode, amount]) => `
-            <div class="report-payment-row">
-                <div class="report-payment-label">
-                    <i class="fas ${paymentIcons[mode] || 'fa-circle-dot'}"></i> ${mode}
+        document.getElementById('reportPaymentBreakdown').innerHTML = Object.entries(paymentMap)
+            .filter(([, amount]) => amount > 0)
+            .map(([mode, amount]) => `
+                <div class="report-payment-row">
+                    <div class="report-payment-label">
+                        <i class="fas ${paymentIcons[mode]}"></i> ${mode}
+                        ${mode === 'carte' ? `<span style="font-size:0.72rem; color:var(--text3); margin-left:6px;">(${nbCarte} ticket${nbCarte > 1 ? 's' : ''})</span>` : ''}
+                    </div>
+                    <div class="report-payment-amount">${formatEur(amount)}</div>
                 </div>
-                <div class="report-payment-amount">${formatEur(amount)}</div>
-            </div>
-        `).join('');
+            `).join('');
 
         // Retours échanges
-        const totalRetours = retours.reduce((s, m) => s + (m.w_articles?.prix_unitaire || 0), 0);
         document.getElementById('reportReturns').innerHTML = `
             <div class="report-payment-row">
-                <div class="report-payment-label"><i class="fas fa-undo"></i> Retours</div>
-                <div class="report-payment-amount">${retours.length} — ${formatEur(totalRetours)}</div>
+                <div class="report-payment-label"><i class="fas fa-undo"></i> Retours (espèces rendues)</div>
+                <div class="report-payment-amount" style="color:var(--danger);">− ${formatEur(totalRetours)}</div>
             </div>
             <div class="report-payment-row">
                 <div class="report-payment-label"><i class="fas fa-arrows-rotate"></i> Échanges</div>
@@ -1736,10 +1849,10 @@ async function loadCaisseReport() {
             </div>
         `;
 
-        // Fond de caisse
-        const especes = paymentMap['espèces'] || 0;
-        document.getElementById('fondCaisseInput').dataset.especes = especes;
-        document.getElementById('fondCaisseInput').placeholder = `Espèces attendues : ${formatEur(especes)}`;
+        // Fond de caisse attendu
+        document.getElementById('fondAttendu').textContent = formatEur(fondAttendu);
+        document.getElementById('fondCaisseInput').dataset.fondAttendu = fondAttendu;
+        document.getElementById('fondCaisseInput').placeholder = `Fond attendu : ${formatEur(fondAttendu)}`;
         document.getElementById('fondCaisseResult').style.display = 'none';
         document.getElementById('fondCaisseInput').value = '';
 
@@ -1789,17 +1902,19 @@ function exportCaisseCSV() {
 
 function printCaisseReport() {
     if (!reportData) return;
-    const { date, totalVentes, nbTransactions, ticketMoyen, nbArticles, paymentMap, retours, echanges } = reportData;
+    const { date, totalVentes, nbTransactions, ticketMoyen, nbArticles, paymentMap, retours, echanges, totalRetours, fondAttendu, nbCarte } = reportData;
 
-    const paymentRows = Object.entries(paymentMap).map(([mode, amount]) =>
-        `<tr><td>${mode}</td><td class="r">${formatEur(amount)}</td></tr>`
-    ).join('');
+    const paymentRows = Object.entries(paymentMap)
+        .filter(([, amount]) => amount > 0)
+        .map(([mode, amount]) =>
+            `<tr><td>${mode}${mode === 'carte' ? ` (${nbCarte} ticket${nbCarte > 1 ? 's' : ''})` : ''}</td><td class="r">${formatEur(amount)}</td></tr>`
+        ).join('');
 
     ticketPrint.innerHTML = `
         <div class="ticket">
             <div class="ticket-store">NeXeN Store</div>
             <div class="ticket-meta">*** RAPPORT DE CAISSE ***</div>
-            <div class="ticket-meta">Date : ${new Date(date).toLocaleDateString('fr-FR')}</div>
+            <div class="ticket-meta">Date : ${new Date(date + 'T12:00:00').toLocaleDateString('fr-FR')}</div>
             <div class="ticket-meta">Imprimé par : ${currentUser?.username || ''}</div>
             <hr class="ticket-divider">
             <table class="ticket-totals">
@@ -1814,8 +1929,16 @@ function printCaisseReport() {
             <hr class="ticket-divider">
             <div class="ticket-meta" style="font-weight:bold;">Retours & échanges</div>
             <table class="ticket-totals">
-                <tr><td>Retours</td><td class="r">${retours.length}</td></tr>
+                <tr><td>Retours (espèces rendues)</td><td class="r">− ${formatEur(totalRetours)}</td></tr>
                 <tr><td>Échanges</td><td class="r">${echanges.length}</td></tr>
+            </table>
+            <hr class="ticket-divider">
+            <div class="ticket-meta" style="font-weight:bold;">Fond de caisse attendu</div>
+            <table class="ticket-totals">
+                <tr><td>Fond initial</td><td class="r">${formatEur(currentCaisseSession?.fond_ouverture || 0)}</td></tr>
+                <tr><td>+ Espèces reçues</td><td class="r">${formatEur(paymentMap['espèces'] || 0)}</td></tr>
+                <tr><td>− Retours</td><td class="r">${formatEur(totalRetours)}</td></tr>
+                <tr class="ticket-grand"><td><strong>= Fond attendu</strong></td><td class="r"><strong>${formatEur(fondAttendu)}</strong></td></tr>
             </table>
             <hr class="ticket-divider">
             <div class="ticket-footer">NeXeN Store — Fin de journée</div>
