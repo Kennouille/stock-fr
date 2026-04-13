@@ -1163,13 +1163,46 @@ function showTransactionDetails(transaction) {
     modal.className = 'modal details-modal';
     modal.style.display = 'flex';
 
-    const itemsHtml = transaction.items.map(item => `
-        <div class="detail-item">
-            <span class="detail-name">${escapeHtml(item.nom)}</span>
-            <span class="detail-qty">x${item.quantite}</span>
-            <span class="detail-price">${formatEur(item.prix * item.quantite)}</span>
-        </div>
-    `).join('');
+    let itemsHtml = '';
+    if (transaction.type === 'vente') {
+        itemsHtml = transaction.items.map(item => `
+            <div class="detail-item">
+                <span class="detail-name">${escapeHtml(item.nom)}</span>
+                <span class="detail-qty">x${item.quantite}</span>
+                <span class="detail-price">${formatEur(item.prix * item.quantite)}</span>
+            </div>
+        `).join('');
+    } else if (transaction.type === 'retour') {
+        itemsHtml = `
+            <div class="detail-item">
+                <span class="detail-name">${escapeHtml(transaction.oldArticle?.nom || '—')}</span>
+                <span class="detail-qty">x1</span>
+                <span class="detail-price" style="color:var(--success);">+ ${formatEur(transaction.oldArticle?.prix || 0)}</span>
+            </div>`;
+    } else if (transaction.type === 'echange') {
+        const diff = transaction.diff;
+        const diffLabel = diff === 0 ? 'Prix identique'
+            : diff > 0 ? `Client paie ${formatEur(diff)}`
+            : `Remboursement ${formatEur(Math.abs(diff))}`;
+        itemsHtml = `
+            <div class="detail-item">
+                <span class="detail-name">Retourné : ${escapeHtml(transaction.oldArticle?.nom || '—')}</span>
+                <span class="detail-qty">x1</span>
+                <span class="detail-price">${formatEur(transaction.oldArticle?.prix || 0)}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-name">Échangé : ${escapeHtml(transaction.newArticle?.nom || '—')}</span>
+                <span class="detail-qty">x1</span>
+                <span class="detail-price">${formatEur(transaction.newArticle?.prix || 0)}</span>
+            </div>
+            <div class="detail-item" style="border-top: 1px solid var(--accent); margin-top:6px; padding-top:6px;">
+                <span class="detail-name"><strong>Différence</strong></span>
+                <span class="detail-qty"></span>
+                <span class="detail-price" style="color:${diff > 0 ? 'var(--danger)' : diff < 0 ? 'var(--success)' : 'var(--text3)'};">
+                    <strong>${diffLabel}</strong>
+                </span>
+            </div>`;
+    }
 
     modal.innerHTML = `
         <div class="modal-content details-content">
@@ -1180,15 +1213,14 @@ function showTransactionDetails(transaction) {
             <div class="details-body">
                 <div class="details-info">
                     <p><strong>Date :</strong> ${transaction.date} à ${transaction.time}</p>
-                    <p><strong>Mode :</strong> ${transaction.mode}</p>
+                    ${transaction.type === 'vente' ? `<p><strong>Mode :</strong> ${transaction.mode}</p>` : ''}
+                    <p><strong>Type :</strong> ${transaction.type === 'vente' ? 'Vente' : transaction.type === 'retour' ? 'Retour client' : 'Échange client'}</p>
                 </div>
                 <div class="details-items">
                     <h4>Articles :</h4>
                     ${itemsHtml}
                 </div>
-                <div class="details-total">
-                    <strong>Total : ${formatEur(transaction.total)}</strong>
-                </div>
+                ${transaction.type === 'vente' ? `<div class="details-total"><strong>Total : ${formatEur(transaction.total)}</strong></div>` : ''}
                 <button class="btn-reprint-detail" id="reprintDetailBtn">
                     <i class="fas fa-print"></i> Réimprimer le ticket
                 </button>
@@ -1207,7 +1239,20 @@ function showTransactionDetails(transaction) {
 }
 
 function reprintTicket(transaction) {
-    // Créer un objet lastSaleData factice pour réimpression
+    if (transaction.type === 'retour' || transaction.type === 'echange') {
+        const originalReMode = reMode;
+        const originalReOldArticle = reOldArticle;
+        const originalReNewArticle = reNewArticle;
+        reMode = transaction.type;
+        reOldArticle = transaction.oldArticle ? { nom: transaction.oldArticle.nom, prix_unitaire: transaction.oldArticle.prix } : null;
+        reNewArticle = transaction.newArticle ? { nom: transaction.newArticle.nom, prix_unitaire: transaction.newArticle.prix } : null;
+        printReturnExchangeTicket();
+        reMode = originalReMode;
+        reOldArticle = originalReOldArticle;
+        reNewArticle = originalReNewArticle;
+        return;
+    }
+
     const fakeSaleData = {
         cart: transaction.items.map(item => ({
             nom: item.nom,
