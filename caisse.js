@@ -828,11 +828,21 @@ function printTicket() {
                 </tr>
                 <tr>
                     <td>Mode de paiement</td>
-                    <td class="r">${modePaiement === 'carte' ? 'Carte bancaire' : modePaiement === 'QR code' ? 'QR code' : 'Espèces'}</td>
+                    <td class="r" style="white-space: pre-line;">${
+                        lastSaleData.multiPayments
+                            ? lastSaleData.multiPayments.map(p => {
+                                if (p.method === 'cash') return `Espèces ${formatEur(p.amount)}`;
+                                if (p.method === 'card') return `Carte ${formatEur(p.amount)}`;
+                                if (p.method === 'qr')   return `QR code ${formatEur(p.amount)}`;
+                              }).join('\n')
+                            : modePaiement === 'carte' ? 'Carte bancaire'
+                            : modePaiement === 'QR code' ? 'QR code'
+                            : 'Espèces'
+                    }</td>
                 </tr>
                 <tr>
                     <td>Montant reçu</td>
-                    <td class="r">${formatEur(received)}</td>
+                    <td class="r">${formatEur(total)}</td>
                 </tr>
                 ${modePaiement === 'espèces' ? `
                     <tr>
