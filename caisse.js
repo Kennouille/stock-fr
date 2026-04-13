@@ -729,22 +729,17 @@ async function enregistrerVente(total, received, modePaiement, multiPayments = n
         let totalReceived = received;
 
         if (multiPayments) {
+            totalReceived = total;
             const cashPayment = multiPayments.find(p => p.method === 'cash');
-            if (cashPayment) {
-                change = cashPayment.amount - total;
-                totalReceived = cashPayment.amount;
-                const cardPayment = multiPayments.find(p => p.method === 'card');
-                const qrPayment = multiPayments.find(p => p.method === 'qr');
-                if (cardPayment) displayMode = `Espèces (${formatEur(cashPayment.amount)}) + Carte (${formatEur(cardPayment.amount)})`;
-                else if (qrPayment) displayMode = `Espèces (${formatEur(cashPayment.amount)}) + QR code (${formatEur(qrPayment.amount)})`;
-                else displayMode = `Espèces (${formatEur(cashPayment.amount)})`;
-            } else {
-                const cardPayment = multiPayments.find(p => p.method === 'card');
-                const qrPayment = multiPayments.find(p => p.method === 'qr');
-                if (cardPayment && qrPayment) displayMode = `Carte (${formatEur(cardPayment.amount)}) + QR code (${formatEur(qrPayment.amount)})`;
-                else if (cardPayment) displayMode = `Carte (${formatEur(cardPayment.amount)})`;
-                else if (qrPayment) displayMode = `QR code (${formatEur(qrPayment.amount)})`;
-            }
+            const cardPayment = multiPayments.find(p => p.method === 'card');
+            const qrPayment   = multiPayments.find(p => p.method === 'qr');
+            displayMode = multiPayments
+                .map(p => {
+                    if (p.method === 'cash') return `Espèces (${formatEur(p.amount)})`;
+                    if (p.method === 'card') return `Carte (${formatEur(p.amount)})`;
+                    if (p.method === 'qr')   return `QR code (${formatEur(p.amount)})`;
+                })
+                .join('\n');
         }
 
         lastSaleData = {
