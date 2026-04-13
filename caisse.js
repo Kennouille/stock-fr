@@ -626,7 +626,8 @@ function updateCartDisplay() {
         totalTVA.textContent = '0,00 €';
         totalTTC.textContent = '0,00 €';
         btnTotal.textContent = '0,00 €';
-        validateSaleBtn.disabled = true;
+        const openSplitBtn = document.getElementById('openSplitBtn');
+        if (openSplitBtn) openSplitBtn.disabled = true;
         if (btnPayCard) btnPayCard.disabled = true;
         if (btnPayQr) btnPayQr.disabled = true;
         calculateChange();
@@ -662,8 +663,8 @@ function updateCartDisplay() {
     totalTVA.textContent = formatEur(tvaAmount);
     totalTTC.textContent = formatEur(ttcTotal);
     btnTotal.textContent = formatEur(ttcTotal);
-    validateSaleBtn.disabled = false;
-    if (btnPayCard) btnPayCard.disabled = false;
+    const openSplitBtn = document.getElementById('openSplitBtn');
+    if (openSplitBtn) openSplitBtn.disabled = false;
     if (btnPayQr) btnPayQr.disabled = false;
     calculateChange();
 }
