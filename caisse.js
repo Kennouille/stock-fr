@@ -1026,8 +1026,9 @@ async function loadLastTransactions() {
                 t.items.push({ nom: m.w_articles?.nom || 'Article', quantite: m.quantite, prix: price });
 
             } else if (motif === 'retour' || motif === 'echange') {
-                // Clé basée sur date+heure+motif pour regrouper les 2 lignes d'un échange
-                const key = `${m.date_mouvement}_${m.heure_mouvement}_${motif}`;
+                // Clé basée sur date+minute+motif pour regrouper les 2 lignes d'un échange
+                const heureMinute = m.heure_mouvement ? m.heure_mouvement.substring(0, 5) : '00:00';
+                const key = `${m.date_mouvement}_${heureMinute}_${motif}`;
                 if (!transactions.has(key)) {
                     transactions.set(key, {
                         id: key,
