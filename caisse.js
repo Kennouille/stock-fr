@@ -230,7 +230,16 @@ function setupEventListeners() {
     // Bouton paiement multiple
     if (addSplitBtn) {
         addSplitBtn.addEventListener('click', () => {
-            alert('Paiement multiple - à venir');
+            if (cart.length === 0) {
+                alert('Panier vide');
+                return;
+            }
+            const total = getCartTotal();
+            document.getElementById('multiPayTotal').textContent = formatEur(total);
+            document.getElementById('multiTotalDue').textContent = formatEur(total);
+            document.getElementById('multiTotalPaid').textContent = '0,00 €';
+            document.getElementById('multiRemaining').textContent = formatEur(total);
+            document.getElementById('multiPayModal').style.display = 'flex';
         });
     }
 }

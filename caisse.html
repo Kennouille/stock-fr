@@ -405,6 +405,53 @@
     </div>
 </div>
 
+<!-- MODAL PAIEMENT MULTIPLE -->
+<div id="multiPayModal" class="overlay" style="display:none;">
+    <div class="modal-box" style="max-width: 400px;">
+        <div class="modal-head">
+            <h3><i class="fas fa-plus-circle"></i> Paiement multiple</h3>
+            <button id="closeMultiPayModal" class="btn-close"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="total-display" style="text-align:center; margin-bottom:20px;">
+                Total à payer : <strong id="multiPayTotal">0,00 €</strong>
+            </div>
+            <div id="multiPaymentsList" style="margin-bottom: 15px;">
+                <div class="multi-payment-row">
+                    <select class="multi-method">
+                        <option value="cash">Espèces</option>
+                        <option value="card">Carte</option>
+                        <option value="qr">QR code</option>
+                    </select>
+                    <input type="number" class="multi-amount" placeholder="Montant" step="0.01" min="0">
+                    <button class="remove-multi-row" disabled>🗑</button>
+                </div>
+            </div>
+            <button id="addMultiRowBtn" class="btn-secondary-sm" style="width:100%; margin-bottom:15px;">
+                <i class="fas fa-plus"></i> Ajouter un paiement
+            </button>
+            <div class="multi-summary" style="background:var(--bg3); padding:12px; border-radius:12px;">
+                <div style="display:flex; justify-content:space-between;">
+                    <span>Total dû :</span>
+                    <strong id="multiTotalDue">0,00 €</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:8px;">
+                    <span>Total payé :</span>
+                    <strong id="multiTotalPaid">0,00 €</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:8px; color:var(--accent);">
+                    <span>Reste :</span>
+                    <strong id="multiRemaining">0,00 €</strong>
+                </div>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button id="validateMultiPayBtn" class="btn-primary" disabled>Valider les paiements</button>
+            <button id="cancelMultiPayBtn" class="btn-ghost">Annuler</button>
+        </div>
+    </div>
+</div>
+
 <!-- TICKET IMPRESSION -->
 <div id="ticketPrint" style="display:none;"></div>
 
