@@ -725,7 +725,8 @@ async function enregistrerVente(total, received, modePaiement, multiPayments = n
                 const details = multiPayments.map(p => `${formatEur(p.amount)} ${p.method === 'cash' ? 'espèces' : p.method === 'card' ? 'carte' : 'QR code'}`).join(' + ');
                 commentaire = `Vente caisse (${details}) — Total: ${formatEur(total)}`;
             } else {
-                commentaire = `Vente caisse (${modePaiement}) — Total: ${formatEur(total)} — Reçu: ${formatEur(received)}`;
+                const discountInfo = item.discount > 0 ? ` — Rabais: ${item.discount}%` : '';
+                commentaire = `Vente caisse (${modePaiement}) — Total: ${formatEur(total)} — Reçu: ${formatEur(received)}${discountInfo}`;
             }
 
             await supabase.from('w_mouvements').insert({
@@ -1045,7 +1046,9 @@ async function loadLastTransactions() {
                 const t = transactions.get(key);
                 const price = m.w_articles?.prix_unitaire || 0;
                 t.total += price * m.quantite;
-                t.items.push({ nom: m.w_articles?.nom || 'Article', quantite: m.quantite, prix: price });
+                const rabaisMatch = m.commentaire?.match(/Rabais: (\d+)%/);
+                const discount = rabaisMatch ? parseInt(rabaisMatch[1]) : 0;
+                t.items.push({ nom: m.w_articles?.nom || 'Article', quantite: m.quantite, prix: price, discount });
 
             } else if (motif === 'retour' || motif === 'echange') {
                 // Clé basée sur date+minute+motif pour regrouper les 2 lignes d'un échange
@@ -1283,6 +1286,7 @@ function reprintTicket(transaction) {
         cart: transaction.items.map(item => ({
             nom: item.nom,
             prix_unitaire: item.prix,
+            discount: item.discount || 0,
             quantity: item.quantite
         })),
         total: transaction.total,
