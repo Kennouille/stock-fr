@@ -67,6 +67,12 @@
             <div class="action-desc">Consulter et réimprimer les tickets</div>
         </div>
 
+        <!-- Bloc 6 : Fermeture de caisse -->
+        <div class="card action-card" id="closeCaisseCard">
+            <div class="card-label"><i class="fas fa-cash-register"></i> Fermeture de caisse</div>
+            <div class="action-desc">Rapport journalier & export CSV</div>
+        </div>
+
         <!-- Bloc 5 : Retour / Échange -->
         <div class="card action-card" id="returnExchangeCard">
             <div class="card-label"><i class="fas fa-right-left"></i> Retour / Échange</div>
@@ -460,6 +466,88 @@
         <div class="modal-foot">
             <button id="validateMultiPayBtn" class="btn-primary" disabled>Valider les paiements</button>
             <button id="cancelMultiPayBtn" class="btn-ghost">Annuler</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL FERMETURE DE CAISSE -->
+<div id="closeCaisseModal" class="overlay" style="display:none;">
+    <div class="modal-box" style="max-width:600px; width:95vw;">
+        <div class="modal-head">
+            <h3><i class="fas fa-cash-register"></i> Fermeture de caisse</h3>
+            <button id="closeCloseCaisseModal" class="btn-close"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" style="width:100%; align-items:stretch; padding:20px; gap:16px;">
+
+            <!-- Date -->
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+                <label style="font-size:0.8rem; font-weight:600; color:var(--text2); white-space:nowrap;">Date du rapport :</label>
+                <input type="date" id="caisseReportDate" style="flex:1; padding:8px 12px; border:1px solid var(--border2); border-radius:var(--r-sm); font-family:'Plus Jakarta Sans',sans-serif; font-size:0.85rem;">
+                <button id="loadReportBtn" class="btn-icon-accent"><i class="fas fa-search"></i></button>
+            </div>
+
+            <!-- Résumé -->
+            <div id="reportContent" style="display:none; width:100%;">
+
+                <!-- Statistiques -->
+                <div class="report-stats-grid">
+                    <div class="report-stat-card">
+                        <div class="report-stat-label">Total des ventes</div>
+                        <div class="report-stat-value" id="reportTotalVentes">0,00 €</div>
+                    </div>
+                    <div class="report-stat-card">
+                        <div class="report-stat-label">Nb transactions</div>
+                        <div class="report-stat-value" id="reportNbTransactions">0</div>
+                    </div>
+                    <div class="report-stat-card">
+                        <div class="report-stat-label">Ticket moyen</div>
+                        <div class="report-stat-value" id="reportTicketMoyen">0,00 €</div>
+                    </div>
+                    <div class="report-stat-card">
+                        <div class="report-stat-label">Articles vendus</div>
+                        <div class="report-stat-value" id="reportNbArticles">0</div>
+                    </div>
+                </div>
+
+                <!-- Répartition par mode de paiement -->
+                <div class="report-section">
+                    <div class="report-section-title"><i class="fas fa-chart-pie"></i> Répartition par mode de paiement</div>
+                    <div id="reportPaymentBreakdown"></div>
+                </div>
+
+                <!-- Retours/Échanges -->
+                <div class="report-section">
+                    <div class="report-section-title"><i class="fas fa-right-left"></i> Retours & échanges</div>
+                    <div id="reportReturns"></div>
+                </div>
+
+                <!-- Fond de caisse -->
+                <div class="report-section">
+                    <div class="report-section-title"><i class="fas fa-coins"></i> Comptage du fond de caisse</div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="number" id="fondCaisseInput" placeholder="Montant compté en caisse…" step="0.01" min="0" style="flex:1; padding:10px 13px; border:1px solid var(--border2); border-radius:var(--r-sm); font-family:'Plus Jakarta Sans',sans-serif; font-size:0.9rem;">
+                        <span style="font-size:0.85rem; color:var(--text2);">€</span>
+                    </div>
+                    <div id="fondCaisseResult" style="display:none; margin-top:10px;"></div>
+                </div>
+
+                <!-- Actions -->
+                <div style="display:flex; gap:10px; margin-top:8px;">
+                    <button id="exportCsvBtn" class="btn-primary" style="flex:1;">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                    <button id="printReportBtn" class="btn-print" style="flex:1;">
+                        <i class="fas fa-print"></i> Imprimer le rapport
+                    </button>
+                </div>
+
+            </div>
+
+            <div id="reportEmpty" style="text-align:center; color:var(--text3); padding:30px; display:none;">
+                <i class="fas fa-inbox" style="font-size:2rem; opacity:0.3;"></i>
+                <p style="margin-top:10px;">Aucune vente pour cette date</p>
+            </div>
+
         </div>
     </div>
 </div>

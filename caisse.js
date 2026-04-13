@@ -1589,6 +1589,241 @@ function showHeldCartsModal() {
     });
 }
 
+// ─── FERMETURE DE CAISSE ───
+document.getElementById('closeCaisseCard')?.addEventListener('click', () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('caisseReportDate').value = today;
+    document.getElementById('reportContent').style.display = 'none';
+    document.getElementById('reportEmpty').style.display = 'none';
+    document.getElementById('closeCaisseModal').style.display = 'flex';
+});
+
+document.getElementById('closeCloseCaisseModal')?.addEventListener('click', () => {
+    document.getElementById('closeCaisseModal').style.display = 'none';
+});
+
+document.getElementById('closeCaisseModal')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('closeCaisseModal'))
+        document.getElementById('closeCaisseModal').style.display = 'none';
+});
+
+document.getElementById('loadReportBtn')?.addEventListener('click', loadCaisseReport);
+
+document.getElementById('fondCaisseInput')?.addEventListener('input', () => {
+    const val = parseFloat(document.getElementById('fondCaisseInput').value) || 0;
+    const totalEspeces = parseFloat(document.getElementById('fondCaisseInput').dataset.especes || 0);
+    const diff = +(val - totalEspeces).toFixed(2);
+    const resultEl = document.getElementById('fondCaisseResult');
+    resultEl.style.display = 'block';
+    if (Math.abs(diff) < 0.01) {
+        resultEl.innerHTML = `<div class="fond-caisse-result ok"><i class="fas fa-check-circle"></i> Caisse équilibrée — aucun écart</div>`;
+    } else if (diff > 0) {
+        resultEl.innerHTML = `<div class="fond-caisse-result warn"><i class="fas fa-exclamation-circle"></i> Excédent de ${formatEur(diff)} en caisse</div>`;
+    } else {
+        resultEl.innerHTML = `<div class="fond-caisse-result danger"><i class="fas fa-exclamation-triangle"></i> Manque de ${formatEur(Math.abs(diff))} en caisse</div>`;
+    }
+});
+
+document.getElementById('exportCsvBtn')?.addEventListener('click', exportCaisseCSV);
+document.getElementById('printReportBtn')?.addEventListener('click', printCaisseReport);
+
+let reportData = null;
+
+async function loadCaisseReport() {
+    const date = document.getElementById('caisseReportDate').value;
+    if (!date) return;
+
+    try {
+        const { data: mouvements, error } = await supabase
+            .from('w_mouvements')
+            .select(`*, w_articles (nom, prix_unitaire)`)
+            .in('motif', ['vente', 'retour', 'echange'])
+            .eq('date_mouvement', date)
+            .order('heure_mouvement', { ascending: true });
+
+        if (error) throw error;
+
+        if (!mouvements || mouvements.length === 0) {
+            document.getElementById('reportContent').style.display = 'none';
+            document.getElementById('reportEmpty').style.display = 'block';
+            return;
+        }
+
+        // Grouper les ventes par transaction
+        const transactions = new Map();
+        mouvements.forEach(m => {
+            if (m.motif === 'vente') {
+                const key = `${m.heure_mouvement}_${m.commentaire}`;
+                if (!transactions.has(key)) {
+                    const modeMatch = m.commentaire?.match(/\((.*?)\)/);
+                    transactions.set(key, {
+                        key,
+                        time: m.heure_mouvement,
+                        mode: modeMatch?.[1] || 'inconnu',
+                        total: 0,
+                        items: [],
+                        commentaire: m.commentaire
+                    });
+                }
+                const t = transactions.get(key);
+                const price = m.w_articles?.prix_unitaire || 0;
+                const rabaisMatch = m.commentaire?.match(/Rabais: (\d+)%/);
+                const discount = rabaisMatch ? parseInt(rabaisMatch[1]) : 0;
+                const discountedPrice = +(price * (1 - discount / 100)).toFixed(2);
+                t.total += discountedPrice * m.quantite;
+                t.items.push({ nom: m.w_articles?.nom || 'Article', quantite: m.quantite, prix: price, discount });
+            }
+        });
+
+        const ventesArray = Array.from(transactions.values());
+
+        // Stats globales
+        const totalVentes = +ventesArray.reduce((s, t) => s + t.total, 0).toFixed(2);
+        const nbTransactions = ventesArray.length;
+        const ticketMoyen = nbTransactions > 0 ? +(totalVentes / nbTransactions).toFixed(2) : 0;
+        const nbArticles = ventesArray.reduce((s, t) => s + t.items.reduce((ss, i) => ss + i.quantite, 0), 0);
+
+        // Répartition par mode de paiement
+        const paymentMap = {};
+        ventesArray.forEach(t => {
+            const modes = t.mode.split('\n');
+            modes.forEach(modeStr => {
+                const amountMatch = modeStr.match(/([\d\s,]+\s€)/);
+                const amount = amountMatch
+                    ? parseFloat(amountMatch[1].replace(/\s/g, '').replace(',', '.').replace('€', ''))
+                    : t.total;
+                const label = modeStr.includes('Espèces') ? 'espèces'
+                    : modeStr.includes('Carte') ? 'carte'
+                    : modeStr.includes('QR') ? 'QR code'
+                    : modeStr.trim();
+                paymentMap[label] = (paymentMap[label] || 0) + amount;
+            });
+        });
+
+        // Retours et échanges
+        const retours = mouvements.filter(m => m.motif === 'retour' && m.type === 'entree');
+        const echanges = mouvements.filter(m => m.motif === 'echange' && m.type === 'entree');
+
+        reportData = { date, ventesArray, totalVentes, nbTransactions, ticketMoyen, nbArticles, paymentMap, retours, echanges };
+
+        // Affichage stats
+        document.getElementById('reportTotalVentes').textContent = formatEur(totalVentes);
+        document.getElementById('reportNbTransactions').textContent = nbTransactions;
+        document.getElementById('reportTicketMoyen').textContent = formatEur(ticketMoyen);
+        document.getElementById('reportNbArticles').textContent = nbArticles;
+
+        // Répartition paiement
+        const paymentIcons = { 'espèces': 'fa-money-bill', 'carte': 'fa-credit-card', 'QR code': 'fa-qrcode' };
+        document.getElementById('reportPaymentBreakdown').innerHTML = Object.entries(paymentMap).map(([mode, amount]) => `
+            <div class="report-payment-row">
+                <div class="report-payment-label">
+                    <i class="fas ${paymentIcons[mode] || 'fa-circle-dot'}"></i> ${mode}
+                </div>
+                <div class="report-payment-amount">${formatEur(amount)}</div>
+            </div>
+        `).join('');
+
+        // Retours échanges
+        const totalRetours = retours.reduce((s, m) => s + (m.w_articles?.prix_unitaire || 0), 0);
+        document.getElementById('reportReturns').innerHTML = `
+            <div class="report-payment-row">
+                <div class="report-payment-label"><i class="fas fa-undo"></i> Retours</div>
+                <div class="report-payment-amount">${retours.length} — ${formatEur(totalRetours)}</div>
+            </div>
+            <div class="report-payment-row">
+                <div class="report-payment-label"><i class="fas fa-arrows-rotate"></i> Échanges</div>
+                <div class="report-payment-amount">${echanges.length}</div>
+            </div>
+        `;
+
+        // Fond de caisse
+        const especes = paymentMap['espèces'] || 0;
+        document.getElementById('fondCaisseInput').dataset.especes = especes;
+        document.getElementById('fondCaisseInput').placeholder = `Espèces attendues : ${formatEur(especes)}`;
+        document.getElementById('fondCaisseResult').style.display = 'none';
+        document.getElementById('fondCaisseInput').value = '';
+
+        document.getElementById('reportContent').style.display = 'block';
+        document.getElementById('reportEmpty').style.display = 'none';
+
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors du chargement du rapport');
+    }
+}
+
+function exportCaisseCSV() {
+    if (!reportData) return;
+    const { date, ventesArray } = reportData;
+
+    const rows = [['Date', 'Heure', 'Article', 'Quantité', 'Prix unitaire', 'Rabais %', 'Prix remisé', 'Total ligne', 'Mode paiement', 'Total transaction']];
+
+    ventesArray.forEach(t => {
+        t.items.forEach(item => {
+            const discountedPrice = +(item.prix * (1 - (item.discount || 0) / 100)).toFixed(2);
+            const lineTotal = +(discountedPrice * item.quantite).toFixed(2);
+            rows.push([
+                date,
+                t.time,
+                item.nom,
+                item.quantite,
+                item.prix.toFixed(2),
+                item.discount || 0,
+                discountedPrice.toFixed(2),
+                lineTotal.toFixed(2),
+                t.mode,
+                t.total.toFixed(2)
+            ]);
+        });
+    });
+
+    const csvContent = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `caisse_${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function printCaisseReport() {
+    if (!reportData) return;
+    const { date, totalVentes, nbTransactions, ticketMoyen, nbArticles, paymentMap, retours, echanges } = reportData;
+
+    const paymentRows = Object.entries(paymentMap).map(([mode, amount]) =>
+        `<tr><td>${mode}</td><td class="r">${formatEur(amount)}</td></tr>`
+    ).join('');
+
+    ticketPrint.innerHTML = `
+        <div class="ticket">
+            <div class="ticket-store">NeXeN Store</div>
+            <div class="ticket-meta">*** RAPPORT DE CAISSE ***</div>
+            <div class="ticket-meta">Date : ${new Date(date).toLocaleDateString('fr-FR')}</div>
+            <div class="ticket-meta">Imprimé par : ${currentUser?.username || ''}</div>
+            <hr class="ticket-divider">
+            <table class="ticket-totals">
+                <tr><td>Total ventes</td><td class="r">${formatEur(totalVentes)}</td></tr>
+                <tr><td>Nb transactions</td><td class="r">${nbTransactions}</td></tr>
+                <tr><td>Ticket moyen</td><td class="r">${formatEur(ticketMoyen)}</td></tr>
+                <tr><td>Articles vendus</td><td class="r">${nbArticles}</td></tr>
+            </table>
+            <hr class="ticket-divider">
+            <div class="ticket-meta" style="font-weight:bold;">Répartition paiements</div>
+            <table class="ticket-totals">${paymentRows}</table>
+            <hr class="ticket-divider">
+            <div class="ticket-meta" style="font-weight:bold;">Retours & échanges</div>
+            <table class="ticket-totals">
+                <tr><td>Retours</td><td class="r">${retours.length}</td></tr>
+                <tr><td>Échanges</td><td class="r">${echanges.length}</td></tr>
+            </table>
+            <hr class="ticket-divider">
+            <div class="ticket-footer">NeXeN Store — Fin de journée</div>
+        </div>
+    `;
+    window.print();
+}
+
 // ─── RETOUR / ÉCHANGE ───
 let reMode = null; // 'return' ou 'exchange'
 let reOldArticle = null;
