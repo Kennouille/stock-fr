@@ -68,6 +68,7 @@ const qrContainer         = document.getElementById('qrContainer');
 const qrAmount            = document.getElementById('qrAmount');
 const btnPayCard          = document.getElementById('btnPayCard');
 const btnPayQr            = document.getElementById('btnPayQr');
+const addSplitBtn         = document.getElementById('addSplitBtn');
 
 // ─── INIT ───
 function init() {
@@ -225,6 +226,13 @@ function setupEventListeners() {
     saleModal.addEventListener('click', e => { if (e.target === saleModal) saleModal.style.display = 'none'; });
     stripeModal?.addEventListener('click', e => { if (e.target === stripeModal) stripeModal.style.display = 'none'; });
     qrModal?.addEventListener('click', e => { if (e.target === qrModal) qrModal.style.display = 'none'; });
+
+    // Bouton paiement multiple
+    if (addSplitBtn) {
+        addSplitBtn.addEventListener('click', () => {
+            alert('Paiement multiple - à venir');
+        });
+    }
 }
 
 // ─── MONNAIE ───
@@ -386,6 +394,7 @@ function updateCartDisplay() {
         validateSaleBtn.disabled = true;
         if (btnPayCard) btnPayCard.disabled = true;
         if (btnPayQr) btnPayQr.disabled = true;
+        if (addSplitBtn) addSplitBtn.disabled = true;
         calculateChange();
         return;
     }
@@ -422,6 +431,7 @@ function updateCartDisplay() {
     validateSaleBtn.disabled = false;
     if (btnPayCard) btnPayCard.disabled = false;
     if (btnPayQr) btnPayQr.disabled = false;
+    if (addSplitBtn) addSplitBtn.disabled = false;
     calculateChange();
 }
 
