@@ -242,6 +242,59 @@ function setupEventListeners() {
             document.getElementById('multiPayModal').style.display = 'flex';
         });
     }
+
+    // Fermeture modale
+    document.getElementById('closeMultiPayModal')?.addEventListener('click', () => {
+        document.getElementById('multiPayModal').style.display = 'none';
+        resetMultiPayModal();
+    });
+    document.getElementById('cancelMultiPayBtn')?.addEventListener('click', () => {
+        document.getElementById('multiPayModal').style.display = 'none';
+        resetMultiPayModal();
+    });
+    document.getElementById('addMultiRowBtn')?.addEventListener('click', addMultiPaymentRow);
+    document.getElementById('validateMultiPayBtn')?.addEventListener('click', async () => {
+        const { total, totalPaid } = updateMultiTotals();
+        if (totalPaid < total) {
+            alert('Montant total insuffisant');
+            return;
+        }
+
+        // Récupérer les paiements
+        const payments = [];
+        document.querySelectorAll('#multiPaymentsList .multi-payment-row').forEach(row => {
+            const method = row.querySelector('.multi-method').value;
+            const amount = parseFloat(row.querySelector('.multi-amount').value) || 0;
+            if (amount > 0) {
+                payments.push({ method, amount });
+            }
+        });
+
+        document.getElementById('multiPayModal').style.display = 'none';
+
+        // Traiter les paiements
+        let cashReceived = 0;
+        let cardAmount = 0;
+        let qrAmount = 0;
+
+        for (const p of payments) {
+            if (p.method === 'cash') cashReceived += p.amount;
+            else if (p.method === 'card') cardAmount += p.amount;
+            else if (p.method === 'qr') qrAmount += p.amount;
+        }
+
+        // Traiter carte et QR (un par un pour l'instant)
+        if (cardAmount > 0) {
+            // Ouvrir Stripe pour le montant carte
+            await processCardPaymentOnly(cardAmount);
+        } else if (qrAmount > 0) {
+            await processQrPaymentOnly(qrAmount);
+        } else {
+            await enregistrerVente(total, cashReceived, 'espèces');
+        }
+
+        resetMultiPayModal();
+    });
 }
 
 // ─── MONNAIE ───
@@ -538,7 +591,14 @@ async function handleStripePayment() {
 
         if (paymentIntent.status === 'succeeded') {
             stripeModal.style.display = 'none';
-            await enregistrerVente(total, total, 'carte');
+            const pending = sessionStorage.getItem('multiPayPending');
+            if (pending) {
+                const data = JSON.parse(pending);
+                sessionStorage.removeItem('multiPayPending');
+                await enregistrerVente(getCartTotal(), data.amount, 'carte');
+            } else {
+                await enregistrerVente(total, total, 'carte');
+            }
         }
 
     } catch (err) {
@@ -1066,6 +1126,148 @@ function reprintTicket(transaction) {
     lastSaleData = fakeSaleData;
     printTicket();
     lastSaleData = originalLastSaleData;
+}
+
+// ─── PAIEMENT MULTIPLE ───
+function updateMultiTotals() {
+    const total = getCartTotal();
+    let totalPaid = 0;
+
+    document.querySelectorAll('#multiPaymentsList .multi-amount').forEach(input => {
+        const val = parseFloat(input.value) || 0;
+        totalPaid += val;
+    });
+
+    totalPaid = Math.round(totalPaid * 100) / 100;
+    const remaining = Math.max(0, total - totalPaid);
+
+    document.getElementById('multiTotalPaid').textContent = formatEur(totalPaid);
+    document.getElementById('multiRemaining').textContent = formatEur(remaining);
+
+    const validateBtn = document.getElementById('validateMultiPayBtn');
+    validateBtn.disabled = (totalPaid < total);
+
+    return { total, totalPaid, remaining };
+}
+
+function addMultiPaymentRow() {
+    const container = document.getElementById('multiPaymentsList');
+    const row = document.createElement('div');
+    row.className = 'multi-payment-row';
+    row.innerHTML = `
+        <select class="multi-method">
+            <option value="cash">Espèces</option>
+            <option value="card">Carte</option>
+            <option value="qr">QR code</option>
+        </select>
+        <input type="number" class="multi-amount" placeholder="Montant" step="0.01" min="0">
+        <button class="remove-multi-row">🗑</button>
+    `;
+    container.appendChild(row);
+
+    // Activer tous les boutons supprimer
+    document.querySelectorAll('.remove-multi-row').forEach(btn => btn.disabled = false);
+
+    // Ajouter les événements
+    row.querySelector('.multi-amount').addEventListener('input', updateMultiTotals);
+    row.querySelector('.multi-method').addEventListener('change', updateMultiTotals);
+    row.querySelector('.remove-multi-row').addEventListener('click', () => {
+        if (container.children.length > 1) {
+            row.remove();
+            updateMultiTotals();
+        }
+    });
+}
+
+function resetMultiPayModal() {
+    const container = document.getElementById('multiPaymentsList');
+    container.innerHTML = `
+        <div class="multi-payment-row">
+            <select class="multi-method">
+                <option value="cash">Espèces</option>
+                <option value="card">Carte</option>
+                <option value="qr">QR code</option>
+            </select>
+            <input type="number" class="multi-amount" placeholder="Montant" step="0.01" min="0">
+            <button class="remove-multi-row" disabled>🗑</button>
+        </div>
+    `;
+
+    document.querySelectorAll('#multiPaymentsList .multi-amount').forEach(input => {
+        input.addEventListener('input', updateMultiTotals);
+    });
+    document.querySelectorAll('#multiPaymentsList .multi-method').forEach(select => {
+        select.addEventListener('change', updateMultiTotals);
+    });
+
+    updateMultiTotals();
+}
+
+async function processCardPaymentOnly(amount) {
+    // Stocker temporairement
+    sessionStorage.setItem('multiPayPending', JSON.stringify({
+        type: 'card',
+        amount: amount
+    }));
+
+    // Ouvrir modal Stripe
+    document.getElementById('stripeAmount').textContent = formatEur(amount);
+    stripeModal.style.display = 'flex';
+    stripeError.textContent = '';
+    stripeError.style.display = 'none';
+
+    if (!stripeInstance) {
+        stripeError.textContent = 'Stripe non chargé';
+        stripeError.style.display = 'block';
+        return;
+    }
+
+    stripeElements = stripeInstance.elements();
+    stripeCardElement = stripeElements.create('card', {
+        style: {
+            base: { fontSize: '16px', color: '#1e2a3b', fontFamily: 'Plus Jakarta Sans, sans-serif' }
+        }
+    });
+    stripeCardElement.mount('#stripe-card-element');
+}
+
+async function processQrPaymentOnly(amount) {
+    sessionStorage.setItem('multiPayPending', JSON.stringify({
+        type: 'qr',
+        amount: amount
+    }));
+
+    // Ouvrir modal QR
+    const total = amount;
+    qrAmount.textContent = formatEur(total);
+    qrContainer.innerHTML = '<div class="qr-loading">Génération du QR code…</div>';
+    qrModal.style.display = 'flex';
+
+    try {
+        const res = await fetch(SUPABASE_FUNCTION_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: total, currency: 'eur', type: 'qr' })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        if (!data.url) throw new Error('Pas d\'URL');
+
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.url)}`;
+        qrContainer.innerHTML = `
+            <div style="text-align:center;">
+                <img src="${qrCodeUrl}" style="width:200px;">
+                <p>Le client scanne ce code</p>
+                <button id="qrMultiPaidBtn" class="btn-primary">J'ai reçu le paiement</button>
+            </div>`;
+        document.getElementById('qrMultiPaidBtn')?.addEventListener('click', async () => {
+            qrModal.style.display = 'none';
+            sessionStorage.removeItem('multiPayPending');
+            await enregistrerVente(getCartTotal(), total, 'QR code');
+        });
+    } catch (err) {
+        qrContainer.innerHTML = `<div style="color:red;">${err.message}</div>`;
+    }
 }
 
 init();
