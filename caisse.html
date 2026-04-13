@@ -483,10 +483,7 @@
             <div id="panneauOuverture" style="width:100%;">
                 <div class="report-section" style="margin-bottom:12px;">
                     <div class="report-section-title"><i class="fas fa-clock"></i> Date & heure d'ouverture</div>
-                    <div style="display:flex; gap:10px;">
-                        <input type="date" id="ouvertureDate" style="flex:1; padding:10px 13px; border:1px solid var(--border2); border-radius:var(--r-sm); font-family:'Plus Jakarta Sans',sans-serif; font-size:0.85rem;">
-                        <input type="time" id="ouvertureHeure" style="flex:1; padding:10px 13px; border:1px solid var(--border2); border-radius:var(--r-sm); font-family:'Plus Jakarta Sans',sans-serif; font-size:0.85rem;">
-                    </div>
+                    <div style="font-size:0.95rem; font-weight:600; color:var(--text); padding:8px 0;" id="ouvertureAutoInfo">—</div>
                 </div>
                 <div class="report-section" style="margin-bottom:12px;">
                     <div class="report-section-title"><i class="fas fa-coins"></i> Fond de caisse initial</div>
@@ -512,11 +509,11 @@
                     </div>
                 </div>
 
-                <!-- Date rapport -->
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-                    <label style="font-size:0.8rem; font-weight:600; color:var(--text2); white-space:nowrap;">Date du rapport :</label>
-                    <input type="date" id="caisseReportDate" style="flex:1; padding:8px 12px; border:1px solid var(--border2); border-radius:var(--r-sm); font-family:'Plus Jakarta Sans',sans-serif; font-size:0.85rem;">
-                    <button id="loadReportBtn" class="btn-icon-accent"><i class="fas fa-search"></i></button>
+                <!-- Chargement rapport -->
+                <div style="margin-bottom:12px;">
+                    <button id="loadReportBtn" class="btn-primary" style="width:100%;">
+                        <i class="fas fa-chart-bar"></i> Charger le rapport de cette session
+                    </button>
                 </div>
 
                 <!-- Résumé -->

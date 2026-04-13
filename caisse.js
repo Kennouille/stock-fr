@@ -1595,11 +1595,10 @@ let reportData = null;
 let currentCaisseSession = null;
 
 async function checkCaisseSession() {
-    const today = new Date().toISOString().split('T')[0];
     const { data, error } = await supabase
         .from('w_caisse_sessions')
         .select('*')
-        .eq('date', today)
+        .eq('utilisateur_id', currentUser?.id)
         .eq('statut', 'ouverte')
         .order('created_at', { ascending: false })
         .limit(1)
@@ -1620,16 +1619,15 @@ document.getElementById('closeCaisseCard')?.addEventListener('click', async () =
     await checkCaisseSession();
     const modal = document.getElementById('closeCaisseModal');
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const timeNow = now.toTimeString().slice(0, 5);
 
     if (!currentCaisseSession) {
         // Mode ouverture
         document.getElementById('caisseModalTitle').textContent = 'Ouverture de caisse';
         document.getElementById('panneauOuverture').style.display = 'block';
         document.getElementById('panneauFermeture').style.display = 'none';
-        document.getElementById('ouvertureDate').value = today;
-        document.getElementById('ouvertureHeure').value = timeNow;
+        const dateStr = now.toLocaleDateString('fr-FR');
+        const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('ouvertureAutoInfo').textContent = `${dateStr} à ${timeStr}`;
         document.getElementById('fondOuvertureInput').value = '';
     } else {
         // Mode fermeture
@@ -1638,7 +1636,6 @@ document.getElementById('closeCaisseCard')?.addEventListener('click', async () =
         document.getElementById('panneauFermeture').style.display = 'block';
         document.getElementById('sessionOuvertureInfo').textContent = `${currentCaisseSession.date} à ${currentCaisseSession.heure_ouverture}`;
         document.getElementById('sessionFondInitial').textContent = formatEur(currentCaisseSession.fond_ouverture);
-        document.getElementById('caisseReportDate').value = today;
         document.getElementById('reportContent').style.display = 'none';
         document.getElementById('reportEmpty').style.display = 'none';
     }
@@ -1656,11 +1653,10 @@ document.getElementById('closeCaisseModal')?.addEventListener('click', e => {
 });
 
 document.getElementById('confirmerOuvertureBtn')?.addEventListener('click', async () => {
-    const date = document.getElementById('ouvertureDate').value;
-    const heure = document.getElementById('ouvertureHeure').value;
+    const now = new Date();
+    const date = now.toISOString().split('T')[0];
+    const heure = now.toTimeString().slice(0, 8); // HH:MM:SS
     const fond = parseFloat(document.getElementById('fondOuvertureInput').value) || 0;
-
-    if (!date || !heure) { alert('Veuillez renseigner la date et l\'heure'); return; }
 
     try {
         const { data, error } = await supabase.from('w_caisse_sessions').insert({
@@ -1675,9 +1671,9 @@ document.getElementById('confirmerOuvertureBtn')?.addEventListener('click', asyn
 
         currentCaisseSession = data;
         document.getElementById('caisseCardLabel').textContent = 'Fermeture de caisse';
-        document.getElementById('caisseCardDesc').textContent = `Ouverte à ${heure} — Fond : ${formatEur(fond)}`;
+        document.getElementById('caisseCardDesc').textContent = `Ouverte à ${heure.slice(0,5)} — Fond : ${formatEur(fond)}`;
         document.getElementById('closeCaisseModal').style.display = 'none';
-        alert(`Caisse ouverte à ${heure} avec un fond de ${formatEur(fond)}`);
+        alert(`Caisse ouverte à ${heure.slice(0,5)} avec un fond de ${formatEur(fond)}`);
     } catch (err) {
         console.error(err);
         alert('Erreur lors de l\'ouverture de caisse');
@@ -1706,10 +1702,10 @@ document.getElementById('printReportBtn')?.addEventListener('click', printCaisse
 
 document.getElementById('confirmerFermetureBtn')?.addEventListener('click', async () => {
     if (!currentCaisseSession) return;
-    if (!confirm('Confirmer la fermeture de la caisse pour aujourd\'hui ?')) return;
+    if (!confirm('Confirmer la fermeture de la caisse ?')) return;
 
     const now = new Date();
-    const heureFermeture = now.toTimeString().slice(0, 5);
+    const heureFermeture = now.toTimeString().slice(0, 8);
     const fondFermeture = parseFloat(document.getElementById('fondCaisseInput').value) || null;
 
     try {
@@ -1723,7 +1719,7 @@ document.getElementById('confirmerFermetureBtn')?.addEventListener('click', asyn
         document.getElementById('caisseCardLabel').textContent = 'Ouverture de caisse';
         document.getElementById('caisseCardDesc').textContent = 'Démarrer la journée';
         document.getElementById('closeCaisseModal').style.display = 'none';
-        alert(`Caisse fermée à ${heureFermeture}`);
+        alert(`Caisse fermée à ${heureFermeture.slice(0,5)}`);
     } catch (err) {
         console.error(err);
         alert('Erreur lors de la fermeture de caisse');
@@ -1731,15 +1727,23 @@ document.getElementById('confirmerFermetureBtn')?.addEventListener('click', asyn
 });
 
 async function loadCaisseReport() {
-    const date = document.getElementById('caisseReportDate').value;
-    if (!date) return;
+    if (!currentCaisseSession) { alert('Aucune session ouverte'); return; }
+
+    const sessionDate = currentCaisseSession.date;
+    const sessionHeureOuverture = currentCaisseSession.heure_ouverture;
+    const now = new Date();
+    const sessionHeureFin = now.toTimeString().slice(0, 8);
 
     try {
+        // Récupérer uniquement les mouvements de CET utilisateur depuis l'ouverture
         const { data: mouvements, error } = await supabase
             .from('w_mouvements')
             .select(`*, w_articles (nom, prix_unitaire)`)
             .in('motif', ['vente', 'retour', 'echange'])
-            .eq('date_mouvement', date)
+            .eq('utilisateur_id', currentUser?.id)
+            .eq('date_mouvement', sessionDate)
+            .gte('heure_mouvement', sessionHeureOuverture)
+            .lte('heure_mouvement', sessionHeureFin)
             .order('heure_mouvement', { ascending: true });
 
         if (error) throw error;
@@ -1784,13 +1788,12 @@ async function loadCaisseReport() {
         const ticketMoyen = nbTransactions > 0 ? +(totalVentes / nbTransactions).toFixed(2) : 0;
         const nbArticles = ventesArray.reduce((s, t) => s + t.items.reduce((ss, i) => ss + i.quantite, 0), 0);
 
-        // Répartition par mode de paiement — regrouper espèces, carte, QR
+        // Répartition par mode de paiement
         const paymentMap = { 'espèces': 0, 'carte': 0, 'QR code': 0 };
         let nbCarte = 0;
         ventesArray.forEach(t => {
             const rawMode = t.mode || '';
-            // Paiement multiple : contient des montants entre parenthèses
-            if (rawMode.includes('(') ) {
+            if (rawMode.includes('(')) {
                 const espMatch = rawMode.match(/Espèces\s*\(([\d\s,]+)\s*€\)/i);
                 const carteMatch = rawMode.match(/Carte\s*\(([\d\s,]+)\s*€\)/i);
                 const qrMatch = rawMode.match(/QR code\s*\(([\d\s,]+)\s*€\)/i);
@@ -1806,16 +1809,16 @@ async function loadCaisseReport() {
             }
         });
 
-        // Retours espèces (à déduire du fond)
+        // Retours et échanges de cette session
         const retours = mouvements.filter(m => m.motif === 'retour' && m.type === 'entree');
         const echanges = mouvements.filter(m => m.motif === 'echange' && m.type === 'entree');
         const totalRetours = +retours.reduce((s, m) => s + (m.w_articles?.prix_unitaire || 0) * m.quantite, 0).toFixed(2);
 
         // Fond attendu = fond initial + espèces reçues - retours espèces
-        const fondInitial = currentCaisseSession?.fond_ouverture || 0;
+        const fondInitial = currentCaisseSession.fond_ouverture || 0;
         const fondAttendu = +(fondInitial + paymentMap['espèces'] - totalRetours).toFixed(2);
 
-        reportData = { date, ventesArray, totalVentes, nbTransactions, ticketMoyen, nbArticles, paymentMap, retours, echanges, totalRetours, fondAttendu, nbCarte };
+        reportData = { sessionDate, ventesArray, totalVentes, nbTransactions, ticketMoyen, nbArticles, paymentMap, retours, echanges, totalRetours, fondAttendu, nbCarte };
 
         // Affichage stats
         document.getElementById('reportTotalVentes').textContent = formatEur(totalVentes);
@@ -1849,7 +1852,7 @@ async function loadCaisseReport() {
             </div>
         `;
 
-        // Fond de caisse attendu
+        // Fond de caisse
         document.getElementById('fondAttendu').textContent = formatEur(fondAttendu);
         document.getElementById('fondCaisseInput').dataset.fondAttendu = fondAttendu;
         document.getElementById('fondCaisseInput').placeholder = `Fond attendu : ${formatEur(fondAttendu)}`;
@@ -1867,7 +1870,7 @@ async function loadCaisseReport() {
 
 function exportCaisseCSV() {
     if (!reportData) return;
-    const { date, ventesArray } = reportData;
+    const { sessionDate, ventesArray } = reportData;
 
     const rows = [['Date', 'Heure', 'Article', 'Quantité', 'Prix unitaire', 'Rabais %', 'Prix remisé', 'Total ligne', 'Mode paiement', 'Total transaction']];
 
@@ -1876,7 +1879,7 @@ function exportCaisseCSV() {
             const discountedPrice = +(item.prix * (1 - (item.discount || 0) / 100)).toFixed(2);
             const lineTotal = +(discountedPrice * item.quantite).toFixed(2);
             rows.push([
-                date,
+                sessionDate,
                 t.time,
                 item.nom,
                 item.quantite,
@@ -1895,14 +1898,14 @@ function exportCaisseCSV() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `caisse_${date}.csv`;
+    a.download = `caisse_${sessionDate}_${currentUser?.username || ''}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 }
 
 function printCaisseReport() {
     if (!reportData) return;
-    const { date, totalVentes, nbTransactions, ticketMoyen, nbArticles, paymentMap, retours, echanges, totalRetours, fondAttendu, nbCarte } = reportData;
+    const { sessionDate, totalVentes, nbTransactions, ticketMoyen, nbArticles, paymentMap, retours, echanges, totalRetours, fondAttendu, nbCarte } = reportData;
 
     const paymentRows = Object.entries(paymentMap)
         .filter(([, amount]) => amount > 0)
@@ -1914,8 +1917,9 @@ function printCaisseReport() {
         <div class="ticket">
             <div class="ticket-store">NeXeN Store</div>
             <div class="ticket-meta">*** RAPPORT DE CAISSE ***</div>
-            <div class="ticket-meta">Date : ${new Date(date + 'T12:00:00').toLocaleDateString('fr-FR')}</div>
-            <div class="ticket-meta">Imprimé par : ${currentUser?.username || ''}</div>
+            <div class="ticket-meta">Date : ${new Date(sessionDate + 'T12:00:00').toLocaleDateString('fr-FR')}</div>
+            <div class="ticket-meta">Ouverture : ${currentCaisseSession?.heure_ouverture?.slice(0,5) || '—'}</div>
+            <div class="ticket-meta">Caissier : ${currentUser?.username || ''}</div>
             <hr class="ticket-divider">
             <table class="ticket-totals">
                 <tr><td>Total ventes</td><td class="r">${formatEur(totalVentes)}</td></tr>
@@ -1937,11 +1941,11 @@ function printCaisseReport() {
             <table class="ticket-totals">
                 <tr><td>Fond initial</td><td class="r">${formatEur(currentCaisseSession?.fond_ouverture || 0)}</td></tr>
                 <tr><td>+ Espèces reçues</td><td class="r">${formatEur(paymentMap['espèces'] || 0)}</td></tr>
-                <tr><td>− Retours</td><td class="r">${formatEur(totalRetours)}</td></tr>
+                <tr><td>− Retours espèces</td><td class="r">${formatEur(totalRetours)}</td></tr>
                 <tr class="ticket-grand"><td><strong>= Fond attendu</strong></td><td class="r"><strong>${formatEur(fondAttendu)}</strong></td></tr>
             </table>
             <hr class="ticket-divider">
-            <div class="ticket-footer">NeXeN Store — Fin de journée</div>
+            <div class="ticket-footer">NeXeN Store — Fin de session</div>
         </div>
     `;
     window.print();
@@ -2156,6 +2160,9 @@ async function confirmReturnExchange() {
 
     if (!confirm(confirmMsg)) return;
 
+    const confirmBtn = document.getElementById('reConfirmBtn');
+    if (confirmBtn) { confirmBtn.disabled = true; }
+
     try {
         // Retour : remettre en stock l'ancien article
         const { data: oldStock } = await supabase.from('w_articles').select('stock_actuel').eq('id', reOldArticle.id).single();
@@ -2199,6 +2206,8 @@ async function confirmReturnExchange() {
     } catch (err) {
         console.error(err);
         alert('Erreur lors de l\'enregistrement');
+        const confirmBtn = document.getElementById('reConfirmBtn');
+        if (confirmBtn) confirmBtn.disabled = false;
     }
 }
 
