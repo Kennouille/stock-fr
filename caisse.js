@@ -764,15 +764,16 @@ async function enregistrerVente(total, received, modePaiement, multiPayments = n
             cart: cartSnapshot,
             total,
             received: totalReceived,
-            change: change > 0 ? change : 0,
+            change: changeToReturn > 0 ? changeToReturn : 0,
             modePaiement: displayMode,
             date: new Date(),
             multiPayments: multiPayments
         };
 
+        const changeToReturn = +(totalReceived - total).toFixed(2);
         document.getElementById('saleTotal').textContent = formatEur(total);
         document.getElementById('saleReceived').textContent = formatEur(totalReceived);
-        document.getElementById('saleChange').textContent = change > 0 ? formatEur(change) : '—';
+        document.getElementById('saleChange').textContent = changeToReturn > 0 ? formatEur(changeToReturn) : '—';
         document.getElementById('salePayMode').textContent = displayMode;
         saleModal.style.display = 'flex';
 
