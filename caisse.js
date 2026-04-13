@@ -116,14 +116,15 @@ function setupBeforeUnload() {
 function setupEventListeners() {
     // ⚠️ NE PAS CACHER les événements existants, seulement AJOUTER ces nouveaux
 
-    // Scanner - clic sur la carte pour focus
+    // Scanner - clic sur la carte
     const scanCard = document.querySelector('.scan-block');
     if (scanCard) {
         scanCard.addEventListener('click', (e) => {
-            // Éviter que le clic sur l'input ou le bouton ne déclenche deux fois
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
 
-            if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || e.ctrlKey) {
+            // Sur PC avec clavier physique, focus normal
+            // Sur mobile ou PC sans clavier, clavier virtuel
+            if (!hasPhysicalKeyboard() || e.ctrlKey) {
                 currentInputTarget = 'scan';
                 createVirtualKeyboard('numeric');
             } else {
@@ -132,13 +133,13 @@ function setupEventListeners() {
         });
     }
 
-    // Recherche - clic sur la carte pour focus
+    // Recherche - clic sur la carte
     const searchCard = document.querySelector('.search-block');
     if (searchCard) {
         searchCard.addEventListener('click', (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
 
-            if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || e.ctrlKey) {
+            if (!hasPhysicalKeyboard() || e.ctrlKey) {
                 currentInputTarget = 'search';
                 createVirtualKeyboard('alphabet');
             } else {
@@ -147,13 +148,13 @@ function setupEventListeners() {
         });
     }
 
-    // Prix - clic sur la carte pour focus
+    // Prix - clic sur la carte
     const priceCard = document.querySelector('.price-block');
     if (priceCard) {
         priceCard.addEventListener('click', (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
 
-            if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || e.ctrlKey) {
+            if (!hasPhysicalKeyboard() || e.ctrlKey) {
                 currentInputTarget = 'price';
                 createVirtualKeyboard('numeric');
             } else {
@@ -758,6 +759,7 @@ async function handleLogout() {
 }
 
 // ─── CLAVIER VIRTUEL ───
+// ─── CLAVIER VIRTUEL ───
 function createVirtualKeyboard(type) {
     // Supprimer l'ancien clavier s'il existe
     if (virtualKeyboard) virtualKeyboard.remove();
@@ -847,6 +849,22 @@ function createVirtualKeyboard(type) {
     });
 
     updateDisplay();
+}
+
+// Détecter si l'appareil a un clavier physique
+function hasPhysicalKeyboard() {
+    // Détection basée sur l'agent utilisateur et la taille d'écran
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isTablet = /iPad|Android(?!.*Mobile)/i.test(navigator.userAgent);
+    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    // Sur mobile/tablette tactile -> pas de clavier physique
+    if (isMobile || isTablet || hasTouch) {
+        return false;
+    }
+
+    // Sur PC, on suppose qu'il y a un clavier
+    return true;
 }
 
 // ─── DERNIÈRES TRANSACTIONS ───
