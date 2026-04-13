@@ -346,7 +346,7 @@ function calculateChange() {
 async function handleScan(code) {
     if (!code.trim()) return;
     const { data: article, error } = await supabase
-        .from('w_articles').select('id, nom, code_barre, prix_unitaire, stock_actuel')
+        .from('w_articles').select('id, nom, code_barre, prix_unitaire, stock_actuel, photo_url')
         .eq('code_barre', code.trim()).eq('actif', true).single();
     if (error || !article) { alert('Article non trouvé'); scanInput.value = ''; return; }
     scanInput.value = '';
@@ -358,7 +358,7 @@ async function handleSearchByName() {
     const term = searchNameInput.value.trim();
     if (!term) return;
     const { data: articles, error } = await supabase
-        .from('w_articles').select('id, nom, code_barre, prix_unitaire, stock_actuel')
+        .from('w_articles').select('id, nom, code_barre, prix_unitaire, stock_actuel, photo_url')
         .ilike('nom', `%${term}%`).eq('actif', true).limit(10);
     if (error) { alert('Erreur de recherche'); return; }
     displaySearchResults(articles);
@@ -414,6 +414,20 @@ function openQuantityModal(article) {
     quantityArticleName.textContent = article.nom;
     availableStock.textContent = article.stock_actuel;
     modalQuantity.value = 1;
+
+    const existingPhoto = document.getElementById('modalArticlePhoto');
+    if (existingPhoto) existingPhoto.remove();
+
+    if (article.photo_url) {
+        const photoEl = document.createElement('img');
+        photoEl.id = 'modalArticlePhoto';
+        photoEl.src = article.photo_url;
+        photoEl.alt = article.nom;
+        photoEl.style.cssText = 'width:100%; max-height:160px; object-fit:contain; border-radius:var(--r); margin-bottom:8px; border:1px solid var(--border);';
+        const modalBody = quantityModal.querySelector('.modal-body');
+        modalBody.insertBefore(photoEl, modalBody.firstChild);
+    }
+
     quantityModal.style.display = 'flex';
     setTimeout(() => modalQuantity.select(), 100);
 }
@@ -428,7 +442,7 @@ function addToCartWithQuantity() {
         if (newQty > pendingArticle.stock_actuel) { alert(`Quantité totale (${newQty}) dépasse le stock (${pendingArticle.stock_actuel})`); return; }
         cart[idx].quantity = newQty;
     } else {
-        cart.push({ id: pendingArticle.id, nom: pendingArticle.nom, prix_unitaire: pendingArticle.prix_unitaire, quantity });
+        cart.push({ id: pendingArticle.id, nom: pendingArticle.nom, prix_unitaire: pendingArticle.prix_unitaire, quantity, photo_url: pendingArticle.photo_url || null });
     }
     quantityModal.style.display = 'none';
     pendingArticle = null;
@@ -484,6 +498,11 @@ function updateCartDisplay() {
                 <td class="item-total">
                     ${discount > 0 ? `<span class="item-original-price">${formatEur(item.prix_unitaire * item.quantity)}</span>` : ''}
                     ${formatEur(lineTotal)}
+                </td>
+                <td>
+                    ${item.photo_url
+                        ? `<img src="${item.photo_url}" alt="${escapeHtml(item.nom)}" style="width:40px; height:40px; object-fit:contain; border-radius:6px; border:1px solid var(--border);">`
+                        : `<span style="color:var(--text3); font-size:0.75rem;">—</span>`}
                 </td>
                 <td><button class="remove-item" onclick="window.removeFromCart(${index})"><i class="fas fa-trash"></i></button></td>
             </tr>`;
@@ -1526,7 +1545,7 @@ async function reSearchByBarcode() {
     const code = document.getElementById('reArticleInput').value.trim();
     if (!code) return;
     const { data, error } = await supabase.from('w_articles')
-        .select('id, nom, prix_unitaire, stock_actuel')
+        .select('id, nom, code_barre, prix_unitaire, stock_actuel, photo_url')
         .eq('code_barre', code).eq('actif', true).single();
     if (error || !data) { alert('Article non trouvé'); return; }
     reOldArticle = data;
@@ -1537,7 +1556,7 @@ async function reSearchByName() {
     const term = document.getElementById('reArticleSearchInput').value.trim();
     if (!term) return;
     const { data, error } = await supabase.from('w_articles')
-        .select('id, nom, prix_unitaire, stock_actuel')
+        .select('id, nom, code_barre, prix_unitaire, stock_actuel, photo_url')
         .ilike('nom', `%${term}%`).eq('actif', true).limit(8);
     if (error || !data?.length) { alert('Aucun résultat'); return; }
     const container = document.getElementById('reSearchResults');
