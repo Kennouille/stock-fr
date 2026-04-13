@@ -1245,7 +1245,7 @@ function reprintTicket(transaction) {
         const originalReMode = reMode;
         const originalReOldArticle = reOldArticle;
         const originalReNewArticle = reNewArticle;
-        reMode = transaction.type;
+        reMode = transaction.type === 'retour' ? 'return' : 'exchange';
         reOldArticle = transaction.oldArticle ? { nom: transaction.oldArticle.nom, prix_unitaire: transaction.oldArticle.prix } : null;
         reNewArticle = transaction.newArticle ? { nom: transaction.newArticle.nom, prix_unitaire: transaction.newArticle.prix } : null;
         printReturnExchangeTicket();
