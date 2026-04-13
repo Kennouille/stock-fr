@@ -1054,3 +1054,94 @@ body {
 .split-success {
     color: var(--success);
 }
+
+/* RETOUR / ÉCHANGE */
+.btn-re-choice {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 20px 12px;
+    background: var(--surface2);
+    border: 1.5px solid var(--border2);
+    border-radius: var(--r);
+    cursor: pointer;
+    transition: all .2s;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.btn-re-choice:hover {
+    border-color: var(--accent);
+    background: var(--accent-light);
+}
+.btn-re-choice i {
+    font-size: 1.4rem;
+    color: var(--accent);
+}
+.btn-re-choice span {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+}
+.btn-re-choice small {
+    font-size: 0.72rem;
+    color: var(--text3);
+}
+
+.re-article-card {
+    background: var(--accent-light);
+    border: 1px solid var(--accent);
+    border-radius: var(--r);
+    padding: 14px 16px;
+    width: 100%;
+}
+.re-article-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+.re-article-price {
+    font-family: 'Fraunces', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 6px;
+}
+.re-article-refund {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--success);
+}
+
+.re-summary-old {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: var(--text2);
+}
+
+.re-exchange-result {
+    padding: 14px 16px;
+    border-radius: var(--r);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-align: center;
+}
+.re-exchange-result.equal {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+}
+.re-exchange-result.refund {
+    background: var(--success-light);
+    border: 1px solid #a7f3d0;
+    color: var(--success);
+}
+.re-exchange-result.topup {
+    background: var(--danger-light);
+    border: 1px solid #fecaca;
+    color: var(--danger);
+}

@@ -1322,4 +1322,310 @@ async function processQrPaymentOnly(amount, allPayments = null) {
     }
 }
 
+// ─── RETOUR / ÉCHANGE ───
+let reMode = null; // 'return' ou 'exchange'
+let reOldArticle = null;
+let reNewArticle = null;
+
+document.getElementById('returnExchangeCard')?.addEventListener('click', () => {
+    reMode = null; reOldArticle = null; reNewArticle = null;
+    reStep(0);
+    document.getElementById('returnExchangeModal').style.display = 'flex';
+});
+document.getElementById('closeReturnExchangeModal')?.addEventListener('click', closeReModal);
+document.getElementById('reCancelBtn')?.addEventListener('click', closeReModal);
+document.getElementById('returnExchangeModal')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('returnExchangeModal')) closeReModal();
+});
+
+document.getElementById('chooseReturnBtn')?.addEventListener('click', () => {
+    reMode = 'return';
+    document.getElementById('returnExchangeTitle').innerHTML = '<i class="fas fa-undo"></i> Retour';
+    reStep(1);
+});
+document.getElementById('chooseExchangeBtn')?.addEventListener('click', () => {
+    reMode = 'exchange';
+    document.getElementById('returnExchangeTitle').innerHTML = '<i class="fas fa-arrows-rotate"></i> Échange';
+    reStep(1);
+});
+
+// Scan article retourné
+document.getElementById('reArticleScanBtn')?.addEventListener('click', () => reSearchByBarcode());
+document.getElementById('reArticleInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') reSearchByBarcode(); });
+
+// Recherche nom article retourné
+document.getElementById('reArticleSearchBtn')?.addEventListener('click', () => reSearchByName());
+document.getElementById('reArticleSearchInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') reSearchByName(); });
+
+// Scan nouvel article (échange)
+document.getElementById('reNewArticleScanBtn')?.addEventListener('click', () => reSearchNewByBarcode());
+document.getElementById('reNewArticleInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') reSearchNewByBarcode(); });
+
+// Recherche nom nouvel article (échange)
+document.getElementById('reNewArticleSearchBtn')?.addEventListener('click', () => reSearchNewByName());
+document.getElementById('reNewArticleSearchInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') reSearchNewByName(); });
+
+document.getElementById('reConfirmBtn')?.addEventListener('click', confirmReturnExchange);
+
+function closeReModal() {
+    document.getElementById('returnExchangeModal').style.display = 'none';
+    reMode = null; reOldArticle = null; reNewArticle = null;
+}
+
+function reStep(step) {
+    document.getElementById('reStep0').style.display = step === 0 ? 'block' : 'none';
+    document.getElementById('reStep1').style.display = step >= 1 ? 'block' : 'none';
+    document.getElementById('reStep2').style.display = step === 2 ? 'block' : 'none';
+    document.getElementById('reModalFoot').style.display = step >= 1 ? 'flex' : 'none';
+    document.getElementById('reConfirmBtn').disabled = true;
+    if (step === 1) {
+        document.getElementById('reArticleInput').value = '';
+        document.getElementById('reArticleSearchInput').value = '';
+        document.getElementById('reArticleFound').style.display = 'none';
+        document.getElementById('reSearchResults').style.display = 'none';
+    }
+}
+
+async function reSearchByBarcode() {
+    const code = document.getElementById('reArticleInput').value.trim();
+    if (!code) return;
+    const { data, error } = await supabase.from('w_articles')
+        .select('id, nom, prix_unitaire, stock_actuel')
+        .eq('code_barre', code).eq('actif', true).single();
+    if (error || !data) { alert('Article non trouvé'); return; }
+    reOldArticle = data;
+    displayReOldArticle();
+}
+
+async function reSearchByName() {
+    const term = document.getElementById('reArticleSearchInput').value.trim();
+    if (!term) return;
+    const { data, error } = await supabase.from('w_articles')
+        .select('id, nom, prix_unitaire, stock_actuel')
+        .ilike('nom', `%${term}%`).eq('actif', true).limit(8);
+    if (error || !data?.length) { alert('Aucun résultat'); return; }
+    const container = document.getElementById('reSearchResults');
+    container.style.display = 'block';
+    container.innerHTML = data.map(a => `
+        <div class="result-item" style="cursor:pointer;" data-article='${JSON.stringify(a)}'>
+            <div class="result-info">
+                <div class="result-name">${escapeHtml(a.nom)}</div>
+            </div>
+            <div class="result-price">${formatEur(a.prix_unitaire)}</div>
+        </div>
+    `).join('');
+    container.querySelectorAll('.result-item').forEach(item => {
+        item.addEventListener('click', () => {
+            reOldArticle = JSON.parse(item.dataset.article);
+            container.style.display = 'none';
+            displayReOldArticle();
+        });
+    });
+}
+
+function displayReOldArticle() {
+    const box = document.getElementById('reArticleFound');
+    box.querySelector('.re-article-name').textContent = reOldArticle.nom;
+    box.querySelector('.re-article-price').textContent = formatEur(reOldArticle.prix_unitaire);
+    box.querySelector('.re-article-refund').textContent = reMode === 'return'
+        ? `À rembourser au client : ${formatEur(reOldArticle.prix_unitaire)}`
+        : `Article à échanger — ${formatEur(reOldArticle.prix_unitaire)}`;
+    box.style.display = 'block';
+
+    if (reMode === 'return') {
+        document.getElementById('reConfirmBtn').disabled = false;
+    } else {
+        // Passer à l'étape 2
+        document.getElementById('reStep2').style.display = 'block';
+        document.getElementById('reSummaryOld') && (document.getElementById('reSummaryOld').textContent = '');
+        document.querySelector('.re-summary-old').textContent = `Article retourné : ${reOldArticle.nom} — ${formatEur(reOldArticle.prix_unitaire)}`;
+        document.getElementById('reNewArticleInput').value = '';
+        document.getElementById('reNewArticleSearchInput').value = '';
+        document.getElementById('reNewArticleFound').style.display = 'none';
+        document.getElementById('reExchangeSummary').style.display = 'none';
+    }
+}
+
+async function reSearchNewByBarcode() {
+    const code = document.getElementById('reNewArticleInput').value.trim();
+    if (!code) return;
+    const { data, error } = await supabase.from('w_articles')
+        .select('id, nom, prix_unitaire, stock_actuel')
+        .eq('code_barre', code).eq('actif', true).single();
+    if (error || !data) { alert('Article non trouvé'); return; }
+    reNewArticle = data;
+    displayReNewArticle();
+}
+
+async function reSearchNewByName() {
+    const term = document.getElementById('reNewArticleSearchInput').value.trim();
+    if (!term) return;
+    const { data, error } = await supabase.from('w_articles')
+        .select('id, nom, prix_unitaire, stock_actuel')
+        .ilike('nom', `%${term}%`).eq('actif', true).limit(8);
+    if (error || !data?.length) { alert('Aucun résultat'); return; }
+    const container = document.getElementById('reNewSearchResults');
+    container.style.display = 'block';
+    container.innerHTML = data.map(a => `
+        <div class="result-item" style="cursor:pointer;" data-article='${JSON.stringify(a)}'>
+            <div class="result-info">
+                <div class="result-name">${escapeHtml(a.nom)}</div>
+            </div>
+            <div class="result-price">${formatEur(a.prix_unitaire)}</div>
+        </div>
+    `).join('');
+    container.querySelectorAll('.result-item').forEach(item => {
+        item.addEventListener('click', () => {
+            reNewArticle = JSON.parse(item.dataset.article);
+            container.style.display = 'none';
+            displayReNewArticle();
+        });
+    });
+}
+
+function displayReNewArticle() {
+    const box = document.getElementById('reNewArticleFound');
+    const diff = +(reNewArticle.prix_unitaire - reOldArticle.prix_unitaire).toFixed(2);
+    let summaryHtml = '';
+    let summaryClass = '';
+
+    if (diff === 0) {
+        summaryHtml = '<i class="fas fa-check-circle"></i> Prix identique — aucun montant à régler';
+        summaryClass = 'equal';
+    } else if (diff > 0) {
+        summaryHtml = `<i class="fas fa-arrow-up"></i> Le client doit payer la différence : <strong>${formatEur(diff)}</strong>`;
+        summaryClass = 'topup';
+    } else {
+        summaryHtml = `<i class="fas fa-arrow-down"></i> À rembourser au client : <strong>${formatEur(Math.abs(diff))}</strong>`;
+        summaryClass = 'refund';
+    }
+
+    box.innerHTML = `
+        <div class="re-article-name">${escapeHtml(reNewArticle.nom)}</div>
+        <div class="re-article-price">${formatEur(reNewArticle.prix_unitaire)}</div>
+    `;
+    box.style.display = 'block';
+
+    const summary = document.getElementById('reExchangeSummary');
+    summary.innerHTML = `<div class="re-exchange-result ${summaryClass}">${summaryHtml}</div>`;
+    summary.style.display = 'block';
+
+    document.getElementById('reConfirmBtn').disabled = false;
+}
+
+async function confirmReturnExchange() {
+    if (!reOldArticle) return;
+    if (reMode === 'exchange' && !reNewArticle) return;
+
+    const diff = reMode === 'exchange'
+        ? +(reNewArticle.prix_unitaire - reOldArticle.prix_unitaire).toFixed(2)
+        : 0;
+
+    const confirmMsg = reMode === 'return'
+        ? `Confirmer le retour de "${reOldArticle.nom}" et rembourser ${formatEur(reOldArticle.prix_unitaire)} ?`
+        : diff === 0
+            ? `Confirmer l'échange de "${reOldArticle.nom}" contre "${reNewArticle.nom}" (même prix) ?`
+            : diff > 0
+                ? `Confirmer l'échange ? Le client paie ${formatEur(diff)} en plus.`
+                : `Confirmer l'échange ? Rembourser ${formatEur(Math.abs(diff))} au client.`;
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        // Retour : remettre en stock l'ancien article
+        const { data: oldStock } = await supabase.from('w_articles').select('stock_actuel').eq('id', reOldArticle.id).single();
+        await supabase.from('w_articles').update({ stock_actuel: oldStock.stock_actuel + 1 }).eq('id', reOldArticle.id);
+        await supabase.from('w_mouvements').insert({
+            article_id: reOldArticle.id,
+            type: 'entree',
+            quantite: 1,
+            utilisateur_id: currentUser?.id,
+            motif: reMode === 'return' ? 'retour' : 'echange',
+            commentaire: reMode === 'return'
+                ? `Retour client — ${reOldArticle.nom} — Remboursement : ${formatEur(reOldArticle.prix_unitaire)}`
+                : `Échange client — Retour : ${reOldArticle.nom} — Nouvel article : ${reNewArticle.nom}`,
+            stock_avant: oldStock.stock_actuel,
+            stock_apres: oldStock.stock_actuel + 1,
+            date_mouvement: new Date().toISOString().split('T')[0],
+            heure_mouvement: new Date().toLocaleTimeString('fr-FR')
+        });
+
+        if (reMode === 'exchange') {
+            // Sortie du nouvel article
+            const { data: newStock } = await supabase.from('w_articles').select('stock_actuel').eq('id', reNewArticle.id).single();
+            await supabase.from('w_articles').update({ stock_actuel: newStock.stock_actuel - 1 }).eq('id', reNewArticle.id);
+            await supabase.from('w_mouvements').insert({
+                article_id: reNewArticle.id,
+                type: 'sortie',
+                quantite: 1,
+                utilisateur_id: currentUser?.id,
+                motif: 'echange',
+                commentaire: `Échange client — Nouvel article : ${reNewArticle.nom} — Article retourné : ${reOldArticle.nom}`,
+                stock_avant: newStock.stock_actuel,
+                stock_apres: newStock.stock_actuel - 1,
+                date_mouvement: new Date().toISOString().split('T')[0],
+                heure_mouvement: new Date().toLocaleTimeString('fr-FR')
+            });
+        }
+
+        printReturnExchangeTicket();
+        closeReModal();
+
+    } catch (err) {
+        console.error(err);
+        alert('Erreur lors de l\'enregistrement');
+    }
+}
+
+function printReturnExchangeTicket() {
+    const date = new Date();
+    const dateStr = date.toLocaleDateString('fr-FR');
+    const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const diff = reMode === 'exchange'
+        ? +(reNewArticle.prix_unitaire - reOldArticle.prix_unitaire).toFixed(2)
+        : 0;
+
+    let bodyHtml = '';
+
+    if (reMode === 'return') {
+        bodyHtml = `
+            <tr><td>Article retourné</td><td class="r">${escapeHtml(reOldArticle.nom)}</td></tr>
+            <tr><td>Prix remboursé</td><td class="r">${formatEur(reOldArticle.prix_unitaire)}</td></tr>
+        `;
+    } else {
+        bodyHtml = `
+            <tr><td>Article retourné</td><td class="r">${escapeHtml(reOldArticle.nom)}</td></tr>
+            <tr><td>Prix retourné</td><td class="r">${formatEur(reOldArticle.prix_unitaire)}</td></tr>
+            <tr><td>Nouvel article</td><td class="r">${escapeHtml(reNewArticle.nom)}</td></tr>
+            <tr><td>Prix nouvel article</td><td class="r">${formatEur(reNewArticle.prix_unitaire)}</td></tr>
+            ${diff === 0
+                ? `<tr><td colspan="2" style="text-align:center;">— Prix identique, aucun montant à régler —</td></tr>`
+                : diff > 0
+                    ? `<tr><td><strong>Supplément client</strong></td><td class="r"><strong>${formatEur(diff)}</strong></td></tr>`
+                    : `<tr><td><strong>Remboursement client</strong></td><td class="r"><strong>${formatEur(Math.abs(diff))}</strong></td></tr>`
+            }
+        `;
+    }
+
+    ticketPrint.innerHTML = `
+        <div class="ticket">
+            <div class="ticket-store">NeXeN Store</div>
+            <div class="ticket-meta">${dateStr} — ${timeStr}</div>
+            <div class="ticket-meta">Caissier : ${currentUser?.username || ''}</div>
+            <hr class="ticket-divider">
+            <div class="ticket-meta" style="font-weight:bold; font-size:13px;">
+                ${reMode === 'return' ? '*** RETOUR CLIENT ***' : '*** ÉCHANGE CLIENT ***'}
+            </div>
+            <hr class="ticket-divider">
+            <table class="ticket-totals">
+                ${bodyHtml}
+            </table>
+            <hr class="ticket-divider">
+            <div class="ticket-footer">Merci de votre confiance !<br>NeXeN Store</div>
+        </div>
+    `;
+
+    window.print();
+}
+
 init();
