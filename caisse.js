@@ -1622,7 +1622,7 @@ async function confirmReturnExchange() {
     if (!reOldArticle) return;
     if (reMode === 'exchange' && !reNewArticle) return;
 
-    const diff = reMode === 'exchange'
+    const diff = (reMode === 'exchange' && reNewArticle && reOldArticle)
         ? +(reNewArticle.prix_unitaire - reOldArticle.prix_unitaire).toFixed(2)
         : 0;
 
