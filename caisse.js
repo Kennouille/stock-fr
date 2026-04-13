@@ -1154,6 +1154,7 @@ function displayTransactionsModal() {
     modal.querySelectorAll('.btn-details').forEach(btn => {
         btn.onclick = () => {
             const idx = parseInt(btn.dataset.idx);
+            console.log('Transaction détails:', JSON.stringify(lastTransactions[idx]));
             showTransactionDetails(lastTransactions[idx]);
         };
     });
