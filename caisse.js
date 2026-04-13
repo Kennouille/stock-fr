@@ -288,9 +288,9 @@ function setupEventListeners() {
             // Ouvrir Stripe pour le montant carte
             await processCardPaymentOnly(cardAmount);
         } else if (qrAmount > 0) {
-            await processQrPaymentOnly(qrAmount);
+            await processQrPaymentOnly(qrAmount, payments);
         } else {
-            await enregistrerVente(total, cashReceived, 'espèces');
+            await enregistrerVente(total, cashReceived, 'espèces', payments);
         }
 
         resetMultiPayModal();
@@ -592,10 +592,16 @@ async function handleStripePayment() {
         if (paymentIntent.status === 'succeeded') {
             stripeModal.style.display = 'none';
             const pending = sessionStorage.getItem('multiPayPending');
+            const allPayments = sessionStorage.getItem('multiPayAllPayments');
             if (pending) {
                 const data = JSON.parse(pending);
                 sessionStorage.removeItem('multiPayPending');
-                await enregistrerVente(getCartTotal(), data.amount, 'carte');
+                sessionStorage.removeItem('multiPayAllPayments');
+                if (allPayments) {
+                    await enregistrerVente(getCartTotal(), data.amount, 'carte', JSON.parse(allPayments));
+                } else {
+                    await enregistrerVente(getCartTotal(), data.amount, 'carte');
+                }
             } else {
                 await enregistrerVente(total, total, 'carte');
             }
@@ -697,20 +703,30 @@ async function openQrModal() {
 }
 
 // ─── ENREGISTRER VENTE ───
-async function enregistrerVente(total, received, modePaiement) {
+async function enregistrerVente(total, received, modePaiement, multiPayments = null) {
     const cartSnapshot = [...cart];
     try {
         for (const item of cartSnapshot) {
             const { data: article } = await supabase.from('w_articles').select('stock_actuel').eq('id', item.id).single();
             const newStock = article.stock_actuel - item.quantity;
             await supabase.from('w_articles').update({ stock_actuel: newStock, date_maj_stock: new Date() }).eq('id', item.id);
+
+            // Construire le commentaire avec tous les paiements
+            let commentaire = `Vente caisse — Total: ${formatEur(total)}`;
+            if (multiPayments) {
+                const details = multiPayments.map(p => `${formatEur(p.amount)} ${p.method === 'cash' ? 'espèces' : p.method === 'card' ? 'carte' : 'QR code'}`).join(' + ');
+                commentaire = `Vente caisse (${details}) — Total: ${formatEur(total)}`;
+            } else {
+                commentaire = `Vente caisse (${modePaiement}) — Total: ${formatEur(total)} — Reçu: ${formatEur(received)}`;
+            }
+
             await supabase.from('w_mouvements').insert({
                 article_id: item.id,
                 type: 'sortie',
                 quantite: item.quantity,
                 utilisateur_id: currentUser?.id,
                 motif: 'vente',
-                commentaire: `Vente caisse (${modePaiement}) — Total: ${formatEur(total)} — Reçu: ${formatEur(received)}`,
+                commentaire: commentaire,
                 stock_avant: article.stock_actuel,
                 stock_apres: newStock,
                 date_mouvement: new Date().toISOString().split('T')[0],
@@ -718,13 +734,43 @@ async function enregistrerVente(total, received, modePaiement) {
             });
         }
 
-        const change = modePaiement === 'espèces' ? +(received - total).toFixed(2) : 0;
-        lastSaleData = { cart: cartSnapshot, total, received, change, modePaiement, date: new Date() };
+        let change = 0;
+        let displayMode = modePaiement;
+        let totalReceived = received;
+
+        if (multiPayments) {
+            const cashPayment = multiPayments.find(p => p.method === 'cash');
+            if (cashPayment) {
+                change = cashPayment.amount - total;
+                totalReceived = cashPayment.amount;
+                const cardPayment = multiPayments.find(p => p.method === 'card');
+                const qrPayment = multiPayments.find(p => p.method === 'qr');
+                if (cardPayment) displayMode = `Espèces (${formatEur(cashPayment.amount)}) + Carte (${formatEur(cardPayment.amount)})`;
+                else if (qrPayment) displayMode = `Espèces (${formatEur(cashPayment.amount)}) + QR code (${formatEur(qrPayment.amount)})`;
+                else displayMode = `Espèces (${formatEur(cashPayment.amount)})`;
+            } else {
+                const cardPayment = multiPayments.find(p => p.method === 'card');
+                const qrPayment = multiPayments.find(p => p.method === 'qr');
+                if (cardPayment && qrPayment) displayMode = `Carte (${formatEur(cardPayment.amount)}) + QR code (${formatEur(qrPayment.amount)})`;
+                else if (cardPayment) displayMode = `Carte (${formatEur(cardPayment.amount)})`;
+                else if (qrPayment) displayMode = `QR code (${formatEur(qrPayment.amount)})`;
+            }
+        }
+
+        lastSaleData = {
+            cart: cartSnapshot,
+            total,
+            received: totalReceived,
+            change: change > 0 ? change : 0,
+            modePaiement: displayMode,
+            date: new Date(),
+            multiPayments: multiPayments
+        };
 
         document.getElementById('saleTotal').textContent = formatEur(total);
-        document.getElementById('saleReceived').textContent = formatEur(received);
-        document.getElementById('saleChange').textContent = modePaiement === 'espèces' ? formatEur(change) : '—';
-        document.getElementById('salePayMode').textContent = modePaiement;
+        document.getElementById('saleReceived').textContent = formatEur(totalReceived);
+        document.getElementById('saleChange').textContent = change > 0 ? formatEur(change) : '—';
+        document.getElementById('salePayMode').textContent = displayMode;
         saleModal.style.display = 'flex';
 
         cart = [];
@@ -1231,7 +1277,10 @@ async function processCardPaymentOnly(amount) {
     stripeCardElement.mount('#stripe-card-element');
 }
 
-async function processQrPaymentOnly(amount) {
+async function processQrPaymentOnly(amount, allPayments = null) {
+    if (allPayments) {
+        sessionStorage.setItem('multiPayAllPayments', JSON.stringify(allPayments));
+    }
     sessionStorage.setItem('multiPayPending', JSON.stringify({
         type: 'qr',
         amount: amount
@@ -1262,8 +1311,16 @@ async function processQrPaymentOnly(amount) {
             </div>`;
         document.getElementById('qrMultiPaidBtn')?.addEventListener('click', async () => {
             qrModal.style.display = 'none';
+            const allPaymentsStored = sessionStorage.getItem('multiPayAllPayments');
             sessionStorage.removeItem('multiPayPending');
-            await enregistrerVente(getCartTotal(), total, 'QR code');
+            sessionStorage.removeItem('multiPayAllPayments');
+
+            if (allPaymentsStored) {
+                const paymentsData = JSON.parse(allPaymentsStored);
+                await enregistrerVente(getCartTotal(), total, 'QR code', paymentsData);
+            } else {
+                await enregistrerVente(getCartTotal(), total, 'QR code');
+            }
         });
     } catch (err) {
         qrContainer.innerHTML = `<div style="color:red;">${err.message}</div>`;
