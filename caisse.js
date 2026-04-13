@@ -524,6 +524,7 @@ function updateCartDisplay() {
     if (btnPayQr) btnPayQr.disabled = false;
     if (addSplitBtn) addSplitBtn.disabled = false;
     calculateChange();
+    updateHoldButtons();
 }
 
 function clearCart() {
@@ -1475,6 +1476,117 @@ async function processQrPaymentOnly(amount, allPayments = null) {
     } catch (err) {
         qrContainer.innerHTML = `<div style="color:red;">${err.message}</div>`;
     }
+}
+
+// ─── VENTES EN ATTENTE ───
+let heldCarts = [];
+
+function updateHoldButtons() {
+    const holdCartBtn = document.getElementById('holdCartBtn');
+    const recallCartBtn = document.getElementById('recallCartBtn');
+    const holdCount = document.getElementById('holdCount');
+    if (holdCartBtn) holdCartBtn.disabled = cart.length === 0;
+    if (recallCartBtn) recallCartBtn.style.display = heldCarts.length > 0 ? 'flex' : 'none';
+    if (holdCount) holdCount.textContent = heldCarts.length;
+}
+
+document.getElementById('holdCartBtn')?.addEventListener('click', () => {
+    if (cart.length === 0) return;
+    heldCarts.push({
+        id: Date.now(),
+        time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+        cart: [...cart],
+        amountGiven: amountGiven
+    });
+    cart = [];
+    resetAmount();
+    updateCartDisplay();
+    updateHoldButtons();
+});
+
+document.getElementById('recallCartBtn')?.addEventListener('click', () => {
+    showHeldCartsModal();
+});
+
+function showHeldCartsModal() {
+    const existing = document.getElementById('heldCartsModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'heldCartsModal';
+    modal.className = 'overlay';
+    modal.style.display = 'flex';
+
+    modal.innerHTML = `
+        <div class="modal-box" style="max-width:480px;">
+            <div class="modal-head">
+                <h3><i class="fas fa-pause-circle"></i> Paniers en attente</h3>
+                <button class="btn-close" id="closeHeldCartsModal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="width:100%; align-items:stretch; max-height:60vh; overflow-y:auto;">
+                ${heldCarts.map((h, idx) => {
+                    const total = h.cart.reduce((s, i) => {
+                        const discount = i.discount || 0;
+                        const dp = +(i.prix_unitaire * (1 - discount / 100)).toFixed(2);
+                        return s + dp * i.quantity;
+                    }, 0);
+                    const articles = h.cart.map(i => `${i.nom} x${i.quantity}`).join(', ');
+                    return `
+                    <div class="held-cart-item">
+                        <div class="held-cart-header">
+                            <div class="held-cart-time"><i class="fas fa-clock"></i> Mis en attente à ${h.time}</div>
+                            <div class="held-cart-total">${formatEur(total)}</div>
+                        </div>
+                        <div class="held-cart-articles">${articles}</div>
+                        <div class="held-cart-actions">
+                            <button class="btn-recall-cart" data-idx="${idx}"><i class="fas fa-play"></i> Reprendre</button>
+                            <button class="btn-delete-held" data-idx="${idx}"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('closeHeldCartsModal').onclick = () => modal.remove();
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+    modal.querySelectorAll('.btn-recall-cart').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.idx);
+            const held = heldCarts[idx];
+            if (cart.length > 0) {
+                if (!confirm('Le panier en cours sera mis en attente. Continuer ?')) return;
+                heldCarts.push({
+                    id: Date.now(),
+                    time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+                    cart: [...cart],
+                    amountGiven: amountGiven
+                });
+            }
+            cart = held.cart;
+            amountGiven = held.amountGiven || 0;
+            heldCarts.splice(idx, 1);
+            updateCartDisplay();
+            updateAmountDisplay();
+            updateHoldButtons();
+            modal.remove();
+        });
+    });
+
+    modal.querySelectorAll('.btn-delete-held').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.idx);
+            if (confirm('Supprimer ce panier en attente ?')) {
+                heldCarts.splice(idx, 1);
+                updateHoldButtons();
+                modal.remove();
+                if (heldCarts.length > 0) showHeldCartsModal();
+            }
+        });
+    });
 }
 
 // ─── RETOUR / ÉCHANGE ───

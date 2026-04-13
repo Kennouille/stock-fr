@@ -80,7 +80,11 @@
     <main class="main">
         <div class="section-head">
             <h2><i class="fas fa-shopping-basket"></i> Panier en cours</h2>
-            <button id="clearCartBtn" class="btn-danger-ghost"><i class="fas fa-trash"></i> Vider</button>
+            <div style="display:flex; gap:8px;">
+                <button id="holdCartBtn" class="btn-hold"><i class="fas fa-pause"></i> Mettre en attente</button>
+                <button id="recallCartBtn" class="btn-recall" style="display:none;"><i class="fas fa-play"></i> Paniers en attente <span id="holdCount" class="hold-badge">0</span></button>
+                <button id="clearCartBtn" class="btn-danger-ghost"><i class="fas fa-trash"></i> Vider</button>
+            </div>
         </div>
 
         <div class="cart-wrap">

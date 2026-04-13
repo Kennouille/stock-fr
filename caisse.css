@@ -1212,3 +1212,110 @@ body {
     text-decoration: line-through;
     font-weight: 400;
 }
+
+/* VENTE EN ATTENTE */
+.btn-hold {
+    background: transparent;
+    border: 1px solid var(--warn);
+    color: var(--warn);
+    padding: 7px 14px;
+    border-radius: var(--r-sm);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: all .2s;
+}
+.btn-hold:hover { background: var(--warn-light); }
+.btn-hold:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-recall {
+    background: var(--warn);
+    border: none;
+    color: white;
+    padding: 7px 14px;
+    border-radius: var(--r-sm);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: all .2s;
+}
+.btn-recall:hover { background: #b45309; }
+
+.hold-badge {
+    background: white;
+    color: var(--warn);
+    border-radius: 20px;
+    padding: 1px 7px;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.held-cart-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    transition: all .2s;
+}
+.held-cart-item:hover {
+    border-color: var(--warn);
+}
+.held-cart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.held-cart-time {
+    font-size: 0.75rem;
+    color: var(--text3);
+}
+.held-cart-total {
+    font-family: 'Fraunces', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--warn);
+}
+.held-cart-articles {
+    font-size: 0.8rem;
+    color: var(--text2);
+    margin-bottom: 10px;
+}
+.held-cart-actions {
+    display: flex;
+    gap: 8px;
+}
+.btn-recall-cart {
+    flex: 1;
+    background: var(--warn);
+    border: none;
+    color: white;
+    padding: 8px;
+    border-radius: var(--r-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: all .2s;
+}
+.btn-recall-cart:hover { background: #b45309; }
+.btn-delete-held {
+    background: transparent;
+    border: 1px solid #fecaca;
+    color: var(--danger);
+    padding: 8px 12px;
+    border-radius: var(--r-sm);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all .2s;
+}
+.btn-delete-held:hover { background: var(--danger-light); }
