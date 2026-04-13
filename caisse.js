@@ -665,6 +665,7 @@ function updateCartDisplay() {
     btnTotal.textContent = formatEur(ttcTotal);
     const openSplitBtn = document.getElementById('openSplitBtn');
     if (openSplitBtn) openSplitBtn.disabled = false;
+    if (btnPayCard) btnPayCard.disabled = false;
     if (btnPayQr) btnPayQr.disabled = false;
     calculateChange();
 }
