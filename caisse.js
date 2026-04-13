@@ -1003,28 +1003,53 @@ async function loadLastTransactions() {
 
         if (error) throw error;
 
-        // Grouper par transaction (même date/heure et même commentaire)
         const transactions = new Map();
         mouvements.forEach(m => {
-            const key = `${m.date_mouvement}_${m.heure_mouvement}_${m.commentaire}`;
-            if (!transactions.has(key)) {
-                transactions.set(key, {
-                    id: key,
-                    date: m.date_mouvement,
-                    time: m.heure_mouvement,
-                    total: 0,
-                    mode: m.commentaire?.match(/\((.*?)\)/)?.[1] || 'inconnu',
-                    items: []
-                });
+            const motif = m.motif;
+
+            if (motif === 'vente') {
+                const key = `${m.date_mouvement}_${m.heure_mouvement}_${m.commentaire}`;
+                if (!transactions.has(key)) {
+                    transactions.set(key, {
+                        id: key,
+                        date: m.date_mouvement,
+                        time: m.heure_mouvement,
+                        type: 'vente',
+                        total: 0,
+                        mode: m.commentaire?.match(/\((.*?)\)/)?.[1] || 'inconnu',
+                        items: []
+                    });
+                }
+                const t = transactions.get(key);
+                const price = m.w_articles?.prix_unitaire || 0;
+                t.total += price * m.quantite;
+                t.items.push({ nom: m.w_articles?.nom || 'Article', quantite: m.quantite, prix: price });
+
+            } else if (motif === 'retour' || motif === 'echange') {
+                // Clé basée sur date+heure+motif pour regrouper les 2 lignes d'un échange
+                const key = `${m.date_mouvement}_${m.heure_mouvement}_${motif}`;
+                if (!transactions.has(key)) {
+                    transactions.set(key, {
+                        id: key,
+                        date: m.date_mouvement,
+                        time: m.heure_mouvement,
+                        type: motif,
+                        oldArticle: null,
+                        newArticle: null,
+                        diff: 0
+                    });
+                }
+                const t = transactions.get(key);
+                const price = m.w_articles?.prix_unitaire || 0;
+                if (m.type === 'entree') {
+                    t.oldArticle = { nom: m.w_articles?.nom || 'Article', prix: price };
+                } else if (m.type === 'sortie') {
+                    t.newArticle = { nom: m.w_articles?.nom || 'Article', prix: price };
+                }
+                if (t.oldArticle && t.newArticle) {
+                    t.diff = +(t.newArticle.prix - t.oldArticle.prix).toFixed(2);
+                }
             }
-            const transaction = transactions.get(key);
-            const price = m.w_articles?.prix_unitaire || 0;
-            transaction.total += price * m.quantite;
-            transaction.items.push({
-                nom: m.w_articles?.nom || 'Article',
-                quantite: m.quantite,
-                prix: price
-            });
         });
 
         lastTransactions = Array.from(transactions.values()).slice(0, 10);
@@ -1047,31 +1072,65 @@ function displayTransactionsModal() {
                 <button class="close-modal-btn">&times;</button>
             </div>
             <div class="transactions-list">
-                ${lastTransactions.map((t, idx) => `
-                    <div class="transaction-item" data-idx="${idx}">
-                        <div class="transaction-header">
-                            <div class="transaction-date">
-                                <i class="fas fa-calendar"></i> ${t.date} ${t.time}
+                ${lastTransactions.map((t, idx) => {
+                    if (t.type === 'vente') {
+                        return `
+                        <div class="transaction-item" data-idx="${idx}">
+                            <div class="transaction-header">
+                                <div class="transaction-date"><i class="fas fa-calendar"></i> ${t.date} ${t.time}</div>
+                                <div class="transaction-total">${formatEur(t.total)}</div>
                             </div>
-                            <div class="transaction-total">${formatEur(t.total)}</div>
-                        </div>
-                        <div class="transaction-details">
-                            <div class="transaction-mode">
-                                <i class="fas ${t.mode === 'espèces' ? 'fa-money-bill' : t.mode === 'carte' ? 'fa-credit-card' : 'fa-qrcode'}"></i>
-                                ${t.mode}
+                            <div class="transaction-details">
+                                <div class="transaction-mode">
+                                    <i class="fas ${t.mode === 'espèces' ? 'fa-money-bill' : t.mode === 'carte' ? 'fa-credit-card' : 'fa-qrcode'}"></i>
+                                    ${t.mode}
+                                </div>
+                                <div class="transaction-items-count">${t.items.length} article(s)</div>
                             </div>
-                            <div class="transaction-items-count">${t.items.length} article(s)</div>
-                        </div>
-                        <div class="transaction-actions">
-                            <button class="btn-reprint" data-idx="${idx}">
-                                <i class="fas fa-print"></i> Réimprimer
-                            </button>
-                            <button class="btn-details" data-idx="${idx}">
-                                <i class="fas fa-eye"></i> Détails
-                            </button>
-                        </div>
-                    </div>
-                `).join('')}
+                            <div class="transaction-actions">
+                                <button class="btn-reprint" data-idx="${idx}"><i class="fas fa-print"></i> Réimprimer</button>
+                                <button class="btn-details" data-idx="${idx}"><i class="fas fa-eye"></i> Détails</button>
+                            </div>
+                        </div>`;
+                    } else if (t.type === 'retour') {
+                        return `
+                        <div class="transaction-item" data-idx="${idx}">
+                            <div class="transaction-header">
+                                <div class="transaction-date"><i class="fas fa-calendar"></i> ${t.date} ${t.time}</div>
+                                <div class="transaction-total" style="color:var(--success);">Retour</div>
+                            </div>
+                            <div class="transaction-details">
+                                <div class="transaction-mode"><i class="fas fa-undo"></i> ${t.oldArticle?.nom || '—'}</div>
+                                <div class="transaction-items-count" style="color:var(--success);">Remboursement ${formatEur(t.oldArticle?.prix || 0)}</div>
+                            </div>
+                            <div class="transaction-actions">
+                                <button class="btn-reprint" data-idx="${idx}"><i class="fas fa-print"></i> Réimprimer</button>
+                                <button class="btn-details" data-idx="${idx}"><i class="fas fa-eye"></i> Détails</button>
+                            </div>
+                        </div>`;
+                    } else if (t.type === 'echange') {
+                        const diffLabel = t.diff === 0
+                            ? 'Prix identique'
+                            : t.diff > 0
+                                ? `Client paie ${formatEur(t.diff)}`
+                                : `Remboursement ${formatEur(Math.abs(t.diff))}`;
+                        return `
+                        <div class="transaction-item" data-idx="${idx}">
+                            <div class="transaction-header">
+                                <div class="transaction-date"><i class="fas fa-calendar"></i> ${t.date} ${t.time}</div>
+                                <div class="transaction-total" style="color:var(--accent);">Échange</div>
+                            </div>
+                            <div class="transaction-details">
+                                <div class="transaction-mode"><i class="fas fa-arrows-rotate"></i> ${t.oldArticle?.nom || '—'} → ${t.newArticle?.nom || '—'}</div>
+                                <div class="transaction-items-count">${diffLabel}</div>
+                            </div>
+                            <div class="transaction-actions">
+                                <button class="btn-reprint" data-idx="${idx}"><i class="fas fa-print"></i> Réimprimer</button>
+                                <button class="btn-details" data-idx="${idx}"><i class="fas fa-eye"></i> Détails</button>
+                            </div>
+                        </div>`;
+                    }
+                }).join('')}
             </div>
         </div>
     `;
