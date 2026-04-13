@@ -1184,3 +1184,31 @@ body {
     border: 1px solid #fecaca;
     color: var(--danger);
 }
+
+/* RABAIS */
+.discount-select {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--r-sm);
+    padding: 5px 8px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all .2s;
+}
+.discount-select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+.discount-select option[value="0"] { color: var(--text3); }
+.discount-select:not([value="0"]) { color: var(--danger); border-color: var(--danger); }
+
+.item-original-price {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--text3);
+    text-decoration: line-through;
+    font-weight: 400;
+}

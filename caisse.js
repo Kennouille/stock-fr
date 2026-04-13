@@ -455,7 +455,9 @@ function updateCartDisplay() {
 
     let ttcTotal = 0;
     cartBody.innerHTML = cart.map((item, index) => {
-        const lineTotal = +(item.prix_unitaire * item.quantity).toFixed(2);
+        const discount = item.discount || 0;
+        const discountedPrice = +(item.prix_unitaire * (1 - discount / 100)).toFixed(2);
+        const lineTotal = +(discountedPrice * item.quantity).toFixed(2);
         ttcTotal += lineTotal;
         return `
             <tr>
@@ -468,10 +470,22 @@ function updateCartDisplay() {
                         <button onclick="window.changeQty(${index},1)"><i class="fas fa-plus"></i></button>
                     </div>
                 </td>
-                <td class="item-total">${formatEur(lineTotal)}</td>
+                <td>
+                    <select class="discount-select" onchange="window.setDiscount(${index}, this.value)">
+                        <option value="0" ${discount === 0 ? 'selected' : ''}>—</option>
+                        ${[5,10,20,30,40,50,60,70,80,90].map(d => `
+                        <option value="${d}" ${discount === d ? 'selected' : ''}>-${d}%</option>`).join('')}
+                    </select>
+                </td>
+                <td class="item-total">
+                    ${discount > 0 ? `<span class="item-original-price">${formatEur(item.prix_unitaire * item.quantity)}</span>` : ''}
+                    ${formatEur(lineTotal)}
+                </td>
                 <td><button class="remove-item" onclick="window.removeFromCart(${index})"><i class="fas fa-trash"></i></button></td>
             </tr>`;
     }).join('');
+
+    window.setDiscount = (i, val) => { cart[i].discount = parseInt(val) || 0; updateCartDisplay(); };
 
     window.changeQty = (i, d) => { const q = cart[i].quantity + d; if (q < 1) cart.splice(i, 1); else cart[i].quantity = q; updateCartDisplay(); };
     window.removeFromCart = i => { cart.splice(i, 1); updateCartDisplay(); };
@@ -778,12 +792,14 @@ function printTicket() {
     const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
     const rows = items.map(i => {
-        const lineTotal = +(i.prix_unitaire * i.quantity).toFixed(2);
+        const discount = i.discount || 0;
+        const discountedPrice = +(i.prix_unitaire * (1 - discount / 100)).toFixed(2);
+        const lineTotal = +(discountedPrice * i.quantity).toFixed(2);
         return `
             <tr>
-                <td>${escapeHtml(i.nom)}</td>
+                <td>${escapeHtml(i.nom)}${discount > 0 ? ` (-${discount}%)` : ''}</td>
                 <td class="r">${i.quantity}</td>
-                <td class="r">${formatEur(i.prix_unitaire)}</td>
+                <td class="r">${discount > 0 ? `<span style="text-decoration:line-through;font-size:9px;">${formatEur(i.prix_unitaire)}</span> ${formatEur(discountedPrice)}` : formatEur(i.prix_unitaire)}</td>
                 <td class="r">${formatEur(lineTotal)}</td>
             </tr>
         `;
