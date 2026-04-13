@@ -933,3 +933,97 @@ body {
     margin-top: 4px;
     margin-bottom: 8px;
 }
+
+/* PAIEMENT FRACTIONNÉ */
+.split-payment-panel {
+    background: var(--bg2);
+    border-radius: 16px;
+    padding: 16px;
+    margin-top: 16px;
+    border: 1px solid var(--accent);
+}
+
+.split-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.payments-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+}
+
+.payment-item {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+}
+
+.payment-item select {
+    flex: 1;
+    padding: 8px;
+    border-radius: 8px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+.payment-item input {
+    flex: 2;
+    padding: 8px;
+    border-radius: 8px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+.remove-payment-btn {
+    background: var(--danger);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: white;
+}
+
+.btn-secondary-sm {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    width: 100%;
+    margin-bottom: 12px;
+}
+
+.split-totals {
+    background: var(--bg3);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.split-totals div {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.split-remaining {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.split-warning {
+    color: var(--danger);
+}
+
+.split-success {
+    color: var(--success);
+}

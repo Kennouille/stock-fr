@@ -138,11 +138,36 @@
                 <i class="fas fa-qrcode"></i>
                 <span>QR Code</span>
             </button>
-            <button id="validateSaleBtn" class="btn-validate" disabled>
-                <i class="fas fa-coins"></i>
-                <span>Espèces</span>
+            <button id="openSplitBtn" class="btn-validate" disabled>
+                <i class="fas fa-hand-holding-usd"></i>
+                <span>Payer</span>
                 <span class="btn-total-badge" id="btnTotal">0,00 €</span>
             </button>
+
+            <!-- NOUVEAU : Interface paiement fractionné -->
+            <div id="splitPaymentPanel" style="display:none;" class="split-payment-panel">
+                <div class="split-header">
+                    <span><i class="fas fa-hand-holding-usd"></i> Paiement fractionné</span>
+                    <button id="closeSplitPanel" class="btn-icon-sm"><i class="fas fa-times"></i></button>
+                </div>
+                <div id="paymentsList" class="payments-list">
+                    <div class="payment-item" data-idx="0">
+                        <select class="payment-method">
+                            <option value="cash">Espèces</option>
+                            <option value="card">Carte bancaire</option>
+                        </select>
+                        <input type="number" class="payment-amount" placeholder="Montant" step="0.01" min="0">
+                        <button class="remove-payment-btn" disabled><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                <button id="addPaymentBtn" class="btn-secondary-sm"><i class="fas fa-plus"></i> Ajouter un paiement</button>
+                <div class="split-totals">
+                    <div>Total dû : <strong id="splitTotalDue">0,00 €</strong></div>
+                    <div>Total payé : <strong id="splitTotalPaid">0,00 €</strong></div>
+                    <div id="splitRemaining" class="split-remaining">Reste à payer : <strong>0,00 €</strong></div>
+                </div>
+                <button id="validateSplitPaymentBtn" class="btn-primary" disabled>✓ Valider les paiements</button>
+            </div>
         </div>
     </main>
 
