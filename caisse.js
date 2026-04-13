@@ -260,37 +260,29 @@ function setupEventListeners() {
             return;
         }
 
-        // Récupérer les paiements
         const payments = [];
         document.querySelectorAll('#multiPaymentsList .multi-payment-row').forEach(row => {
             const method = row.querySelector('.multi-method').value;
             const amount = parseFloat(row.querySelector('.multi-amount').value) || 0;
-            if (amount > 0) {
-                payments.push({ method, amount });
-            }
+            if (amount > 0) payments.push({ method, amount });
         });
 
         document.getElementById('multiPayModal').style.display = 'none';
 
-        // Traiter les paiements
-        let cashReceived = 0;
-        let cardAmount = 0;
-        let qrAmount = 0;
+        const cardPayment = payments.find(p => p.method === 'card');
+        const qrPayment   = payments.find(p => p.method === 'qr');
 
-        for (const p of payments) {
-            if (p.method === 'cash') cashReceived += p.amount;
-            else if (p.method === 'card') cardAmount += p.amount;
-            else if (p.method === 'qr') qrAmount += p.amount;
-        }
-
-        // Traiter carte et QR (un par un pour l'instant)
-        if (cardAmount > 0) {
-            // Ouvrir Stripe pour le montant carte
-            await processCardPaymentOnly(cardAmount);
-        } else if (qrAmount > 0) {
-            await processQrPaymentOnly(qrAmount, payments);
+        if (cardPayment) {
+            sessionStorage.setItem('multiPayAllPayments', JSON.stringify(payments));
+            sessionStorage.setItem('multiPayPending', JSON.stringify({ type: 'card', amount: cardPayment.amount }));
+            await processCardPaymentOnly(cardPayment.amount);
+        } else if (qrPayment) {
+            sessionStorage.setItem('multiPayAllPayments', JSON.stringify(payments));
+            sessionStorage.setItem('multiPayPending', JSON.stringify({ type: 'qr', amount: qrPayment.amount }));
+            await processQrPaymentOnly(qrPayment.amount, payments);
         } else {
-            await enregistrerVente(total, cashReceived, 'espèces', payments);
+            const cashTotal = payments.reduce((s, p) => s + p.amount, 0);
+            await enregistrerVente(total, cashTotal, 'espèces', payments);
         }
 
         resetMultiPayModal();
@@ -591,17 +583,15 @@ async function handleStripePayment() {
 
         if (paymentIntent.status === 'succeeded') {
             stripeModal.style.display = 'none';
-            const pending = sessionStorage.getItem('multiPayPending');
-            const allPayments = sessionStorage.getItem('multiPayAllPayments');
-            if (pending) {
-                const data = JSON.parse(pending);
-                sessionStorage.removeItem('multiPayPending');
-                sessionStorage.removeItem('multiPayAllPayments');
-                if (allPayments) {
-                    await enregistrerVente(getCartTotal(), data.amount, 'carte', JSON.parse(allPayments));
-                } else {
-                    await enregistrerVente(getCartTotal(), data.amount, 'carte');
-                }
+            const pendingRaw = sessionStorage.getItem('multiPayPending');
+            const allPaymentsRaw = sessionStorage.getItem('multiPayAllPayments');
+            sessionStorage.removeItem('multiPayPending');
+            sessionStorage.removeItem('multiPayAllPayments');
+
+            if (pendingRaw && allPaymentsRaw) {
+                const pendingData = JSON.parse(pendingRaw);
+                const allPayments = JSON.parse(allPaymentsRaw);
+                await enregistrerVente(getCartTotal(), pendingData.amount, 'carte', allPayments);
             } else {
                 await enregistrerVente(total, total, 'carte');
             }
