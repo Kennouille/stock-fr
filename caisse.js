@@ -1045,10 +1045,13 @@ async function loadLastTransactions() {
                 }
                 const t = transactions.get(key);
                 const price = m.w_articles?.prix_unitaire || 0;
-                t.total += price * m.quantite;
                 const rabaisMatch = m.commentaire?.match(/Rabais: (\d+)%/);
                 const discount = rabaisMatch ? parseInt(rabaisMatch[1]) : 0;
+                const discountedPrice = +(price * (1 - discount / 100)).toFixed(2);
+                t.total += discountedPrice * m.quantite;
                 t.items.push({ nom: m.w_articles?.nom || 'Article', quantite: m.quantite, prix: price, discount });
+                const recuMatch = m.commentaire?.match(/Reçu: ([\d\s,]+\s€)/);
+                if (recuMatch) t.received = parseFloat(recuMatch[1].replace(/\s/g, '').replace(',', '.').replace('€', ''));
 
             } else if (motif === 'retour' || motif === 'echange') {
                 // Clé basée sur date+minute+motif pour regrouper les 2 lignes d'un échange
@@ -1290,8 +1293,8 @@ function reprintTicket(transaction) {
             quantity: item.quantite
         })),
         total: transaction.total,
-        received: transaction.total,
-        change: 0,
+        received: transaction.received || transaction.total,
+        change: transaction.received ? +(transaction.received - transaction.total).toFixed(2) : 0,
         modePaiement: transaction.mode,
         date: new Date(`${transaction.date} ${transaction.time}`)
     };
