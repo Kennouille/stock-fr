@@ -1164,7 +1164,8 @@ function showTransactionDetails(transaction) {
     modal.style.display = 'flex';
 
     let itemsHtml = '';
-    if (transaction.type === 'vente') {
+    if (!transaction.type || transaction.type === 'vente') {
+        transaction.type = 'vente';
         itemsHtml = transaction.items.map(item => `
             <div class="detail-item">
                 <span class="detail-name">${escapeHtml(item.nom)}</span>
@@ -1239,6 +1240,7 @@ function showTransactionDetails(transaction) {
 }
 
 function reprintTicket(transaction) {
+    if (!transaction.type) transaction.type = 'vente';
     if (transaction.type === 'retour' || transaction.type === 'echange') {
         const originalReMode = reMode;
         const originalReOldArticle = reOldArticle;
