@@ -14,9 +14,6 @@ let stripeCardElement = null;
 let virtualKeyboard = null;
 let currentInputTarget = null; // 'scan', 'search', 'price'
 let lastTransactions = [];
-let splitPayments = []; // Pour stocker les paiements fractionnés
-let splitModeActive = false; // Mode fractionné activé
-
 
 const STRIPE_PUBLIC_KEY = 'pk_test_51T9DBURq7ukXBvuPlqzY6YGQjobMWNxfdUx88YlpNT3iFgsppTne56qWj8UPIbLcUgsvBcH1NxNXrq2FHvlCjGjJ00EetKx4ko';
 const SUPABASE_FUNCTION_URL = 'https://lanxxvocjwpyegoxxxkj.supabase.co/functions/v1/create-payment-intent';
@@ -184,7 +181,7 @@ function setupEventListeners() {
     priceCheckInput.addEventListener('keypress', e => { if (e.key === 'Enter') handlePriceCheck(); });
 
     clearCartBtn.addEventListener('click', clearCart);
-    document.getElementById('openSplitBtn')?.addEventListener('click', openSplitPayment);
+    validateSaleBtn.addEventListener('click', validateSaleCash);
     logoutBtn.addEventListener('click', handleLogout);
     resetAmountBtn.addEventListener('click', resetAmount);
 
@@ -228,24 +225,6 @@ function setupEventListeners() {
     saleModal.addEventListener('click', e => { if (e.target === saleModal) saleModal.style.display = 'none'; });
     stripeModal?.addEventListener('click', e => { if (e.target === stripeModal) stripeModal.style.display = 'none'; });
     qrModal?.addEventListener('click', e => { if (e.target === qrModal) qrModal.style.display = 'none'; });
-
-    // Paiement fractionné
-    const validateSaleBtnOld = validateSaleBtn;
-    // Remplacer le comportement du bouton validateSaleBtn pour ouvrir le fractionné
-    // On va plutôt modifier le HTML pour avoir un nouveau bouton
-
-    // Ajouter ces lignes à la fin de setupEventListeners()
-    document.getElementById('addPaymentBtn')?.addEventListener('click', addPaymentRow);
-    document.getElementById('validateSplitPaymentBtn')?.addEventListener('click', validateSplitPayment);
-    document.getElementById('closeSplitPanel')?.addEventListener('click', closeSplitPanel);
-
-    // Délégation pour supprimer les lignes de paiement
-    document.getElementById('paymentsList')?.addEventListener('click', (e) => {
-        const btn = e.target.closest('.remove-payment-btn');
-        if (btn) {
-            removePaymentRow(btn);
-        }
-    });
 }
 
 // ─── MONNAIE ───
@@ -285,270 +264,6 @@ function resetAmount() {
     amountGivenDisplay.textContent = '0,00 €';
     changeDisplay.style.display = 'none';
     insufficientDisplay.style.display = 'none';
-}
-
-// ─── PAIEMENT FRACTIONNÉ ───
-function openSplitPayment() {
-    if (cart.length === 0) {
-        alert('Panier vide');
-        return;
-    }
-
-    splitModeActive = true;
-    const total = getCartTotal();
-    document.getElementById('splitTotalDue').textContent = formatEur(total);
-    document.getElementById('splitTotalPaid').textContent = '0,00 €';
-    document.getElementById('splitRemaining').innerHTML = `Reste à payer : <strong>${formatEur(total)}</strong>`;
-
-    // Réinitialiser les paiements
-    splitPayments = [];
-    const paymentsList = document.getElementById('paymentsList');
-    paymentsList.innerHTML = `
-        <div class="payment-item" data-idx="0">
-            <select class="payment-method">
-                <option value="cash">Espèces</option>
-                <option value="card">Carte bancaire</option>
-            </select>
-            <input type="number" class="payment-amount" placeholder="Montant" step="0.01" min="0">
-            <button class="remove-payment-btn" disabled><i class="fas fa-trash"></i></button>
-        </div>
-    `;
-
-    document.getElementById('splitPaymentPanel').style.display = 'block';
-    attachPaymentEvents();
-}
-
-function attachPaymentEvents() {
-    const paymentsList = document.getElementById('paymentsList');
-
-    // Événements sur les champs existants
-    paymentsList.querySelectorAll('.payment-amount').forEach(input => {
-        input.removeEventListener('input', updateSplitTotals);
-        input.addEventListener('input', updateSplitTotals);
-    });
-
-    paymentsList.querySelectorAll('.payment-method').forEach(select => {
-        select.removeEventListener('change', updateSplitTotals);
-        select.addEventListener('change', updateSplitTotals);
-    });
-}
-
-function addPaymentRow() {
-    const paymentsList = document.getElementById('paymentsList');
-    const idx = paymentsList.children.length;
-    const row = document.createElement('div');
-    row.className = 'payment-item';
-    row.setAttribute('data-idx', idx);
-    row.innerHTML = `
-        <select class="payment-method">
-            <option value="cash">Espèces</option>
-            <option value="card">Carte bancaire</option>
-        </select>
-        <input type="number" class="payment-amount" placeholder="Montant" step="0.01" min="0">
-        <button class="remove-payment-btn"><i class="fas fa-trash"></i></button>
-    `;
-    paymentsList.appendChild(row);
-
-    // Activer tous les boutons supprimer sauf le premier
-    const removeBtns = paymentsList.querySelectorAll('.remove-payment-btn');
-    removeBtns.forEach(btn => btn.disabled = false);
-
-    attachPaymentEvents();
-    updateSplitTotals();
-}
-
-function removePaymentRow(btn) {
-    const row = btn.closest('.payment-item');
-    const paymentsList = document.getElementById('paymentsList');
-    if (paymentsList.children.length > 1) {
-        row.remove();
-        // Re-indexer
-        paymentsList.querySelectorAll('.payment-item').forEach((item, i) => {
-            item.setAttribute('data-idx', i);
-        });
-        updateSplitTotals();
-    }
-}
-
-function updateSplitTotals() {
-    const total = getCartTotal();
-    let totalPaid = 0;
-    const payments = [];
-
-    document.querySelectorAll('#paymentsList .payment-item').forEach(item => {
-        const amount = parseFloat(item.querySelector('.payment-amount').value) || 0;
-        const method = item.querySelector('.payment-method').value;
-        totalPaid += amount;
-        payments.push({ amount, method });
-    });
-
-    totalPaid = Math.round(totalPaid * 100) / 100;
-    document.getElementById('splitTotalPaid').textContent = formatEur(totalPaid);
-
-    const remaining = Math.max(0, total - totalPaid);
-    document.getElementById('splitRemaining').innerHTML = `Reste à payer : <strong>${formatEur(remaining)}</strong>`;
-
-    if (remaining > 0) {
-        document.getElementById('splitRemaining').className = 'split-remaining split-warning';
-    } else {
-        document.getElementById('splitRemaining').className = 'split-remaining split-success';
-    }
-
-    const validateBtn = document.getElementById('validateSplitPaymentBtn');
-    validateBtn.disabled = (totalPaid < total);
-
-    // Stocker les paiements pour validation
-    splitPayments = payments;
-}
-
-async function validateSplitPayment() {
-    const total = getCartTotal();
-    let totalPaid = splitPayments.reduce((sum, p) => sum + p.amount, 0);
-    totalPaid = Math.round(totalPaid * 100) / 100;
-
-    if (totalPaid < total) {
-        alert(`Montant total insuffisant. Total dû : ${formatEur(total)}`);
-        return;
-    }
-
-    // Traiter chaque paiement
-    let cashReceived = 0;
-    let cardPayments = [];
-
-    for (const payment of splitPayments) {
-        if (payment.method === 'cash') {
-            cashReceived += payment.amount;
-        } else if (payment.method === 'card') {
-            cardPayments.push(payment.amount);
-        }
-    }
-
-    // Si pas de paiement par carte, valider directement
-    if (cardPayments.length === 0) {
-        await enregistrerVenteFractionnee(total, cashReceived, 'espèces');
-    } else {
-        // Ouvrir Stripe pour le montant total de la carte
-        const totalCard = cardPayments.reduce((a, b) => a + b, 0);
-        await processCardPaymentForSplit(total, cashReceived, totalCard);
-    }
-}
-
-async function processCardPaymentForSplit(total, cashReceived, cardAmount) {
-    // Fermer le panel fractionné
-    closeSplitPanel();
-
-    // Ouvrir le modal Stripe avec le montant de la carte
-    const totalCart = getCartTotal();
-
-    // Stocker temporairement que c'est un paiement fractionné
-    sessionStorage.setItem('splitPending', JSON.stringify({
-        total: total,
-        cashReceived: cashReceived,
-        cardAmount: cardAmount
-    }));
-
-    // Ouvrir le modal Stripe
-    await openStripeModalForSplit(cardAmount);
-}
-
-async function openStripeModalForSplit(amount) {
-    if (cart.length === 0) return;
-
-    document.getElementById('stripeAmount').textContent = formatEur(amount);
-    stripeModal.style.display = 'flex';
-    stripeError.textContent = '';
-    stripeError.style.display = 'none';
-
-    if (!stripeInstance) {
-        stripeError.textContent = 'Stripe non chargé, réessayez.';
-        stripeError.style.display = 'block';
-        return;
-    }
-
-    stripeElements = stripeInstance.elements();
-    stripeCardElement = stripeElements.create('card', {
-        style: {
-            base: { fontSize: '16px', color: '#1e2a3b', fontFamily: 'Plus Jakarta Sans, sans-serif', '::placeholder': { color: '#8b95ab' } }
-        }
-    });
-    stripeCardElement.mount('#stripe-card-element');
-}
-
-async function enregistrerVenteFractionnee(total, cashReceived, modePaiement) {
-    // Construction du commentaire avec détails des paiements
-    let paymentDetails = '';
-    if (splitPayments.length > 0) {
-        paymentDetails = splitPayments.map(p => {
-            if (p.method === 'cash') return `${formatEur(p.amount)} espèces`;
-            return `${formatEur(p.amount)} carte`;
-        }).join(' + ');
-    }
-
-    const commentaire = `Vente caisse (${paymentDetails}) — Total: ${formatEur(total)}`;
-
-    try {
-        for (const item of cart) {
-            const { data: article } = await supabase.from('w_articles').select('stock_actuel').eq('id', item.id).single();
-            const newStock = article.stock_actuel - item.quantity;
-            await supabase.from('w_articles').update({ stock_actuel: newStock, date_maj_stock: new Date() }).eq('id', item.id);
-            await supabase.from('w_mouvements').insert({
-                article_id: item.id,
-                type: 'sortie',
-                quantite: item.quantity,
-                utilisateur_id: currentUser?.id,
-                motif: 'vente',
-                commentaire: commentaire,
-                stock_avant: article.stock_actuel,
-                stock_apres: newStock,
-                date_mouvement: new Date().toISOString().split('T')[0],
-                heure_mouvement: new Date().toLocaleTimeString('fr-FR')
-            });
-        }
-
-        lastSaleData = {
-            cart: [...cart],
-            total,
-            received: total,
-            change: 0,
-            modePaiement: paymentDetails,
-            date: new Date(),
-            splitDetails: splitPayments
-        };
-
-        document.getElementById('saleTotal').textContent = formatEur(total);
-        document.getElementById('saleReceived').textContent = formatEur(total);
-        document.getElementById('saleChange').textContent = '—';
-        document.getElementById('salePayMode').textContent = paymentDetails;
-        saleModal.style.display = 'flex';
-
-        cart = [];
-        updateCartDisplay();
-        resetAmount();
-        closeSplitPanel();
-
-    } catch (err) {
-        console.error(err);
-        alert('Erreur lors de l\'enregistrement de la vente');
-    }
-}
-
-async function processCardPayments(total, cashReceived, cardPayments) {
-    // Si plusieurs cartes, les traiter séquentiellement
-    let totalCardPaid = cardPayments.reduce((a, b) => a + b, 0);
-    let remainingCard = totalCardPaid;
-
-    // Fermer le panel fractionné
-    closeSplitPanel();
-
-    // Pour l'instant, on traite la première carte
-    // Dans une version future, on pourra faire plusieurs appels Stripe
-    await enregistrerVenteFractionnee(total, cashReceived, `carte (${formatEur(cardPayments[0])}) + espèces (${formatEur(cashReceived)})`);
-}
-
-function closeSplitPanel() {
-    splitModeActive = false;
-    document.getElementById('splitPaymentPanel').style.display = 'none';
-    splitPayments = [];
 }
 
 function calculateChange() {
@@ -668,8 +383,7 @@ function updateCartDisplay() {
         totalTVA.textContent = '0,00 €';
         totalTTC.textContent = '0,00 €';
         btnTotal.textContent = '0,00 €';
-        const openSplitBtn = document.getElementById('openSplitBtn');
-        if (openSplitBtn) openSplitBtn.disabled = true;
+        validateSaleBtn.disabled = true;
         if (btnPayCard) btnPayCard.disabled = true;
         if (btnPayQr) btnPayQr.disabled = true;
         calculateChange();
@@ -705,8 +419,7 @@ function updateCartDisplay() {
     totalTVA.textContent = formatEur(tvaAmount);
     totalTTC.textContent = formatEur(ttcTotal);
     btnTotal.textContent = formatEur(ttcTotal);
-    const openSplitBtn = document.getElementById('openSplitBtn');
-    if (openSplitBtn) openSplitBtn.disabled = false;
+    validateSaleBtn.disabled = false;
     if (btnPayCard) btnPayCard.disabled = false;
     if (btnPayQr) btnPayQr.disabled = false;
     calculateChange();
@@ -806,16 +519,7 @@ async function handleStripePayment() {
 
         if (paymentIntent.status === 'succeeded') {
             stripeModal.style.display = 'none';
-
-            // Vérifier si c'est un paiement fractionné
-            const splitPending = sessionStorage.getItem('splitPending');
-            if (splitPending) {
-                const splitData = JSON.parse(splitPending);
-                sessionStorage.removeItem('splitPending');
-                await enregistrerVenteFractionnee(splitData.total, splitData.cashReceived, `espèces (${formatEur(splitData.cashReceived)}) + carte (${formatEur(splitData.cardAmount)})`);
-            } else {
-                await enregistrerVente(total, total, 'carte');
-            }
+            await enregistrerVente(total, total, 'carte');
         }
 
     } catch (err) {
